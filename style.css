@@ -1,0 +1,339 @@
+/* 三角洲配装助手 - 自定义样式 */
+
+/* 基础样式 */
+body {
+    font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    min-height: 100vh;
+}
+
+/* 导航链接 */
+.nav-link {
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+}
+
+.nav-link:hover {
+    background-color: #374151;
+    color: white;
+}
+
+.nav-link.active {
+    background: linear-gradient(to right, #2563eb, #7c3aed);
+    color: white;
+}
+
+/* 玩家类型按钮 - 增强反馈 */
+.player-type-btn {
+    background-color: #374151;
+    border: 2px solid transparent;
+    transition: all 0.3s;
+}
+
+.player-type-btn:hover {
+    background-color: #4b5563;
+    transform: translateY(-2px);
+}
+
+.player-type-btn.active {
+    border-color: #3b82f6;
+    background-color: #4b5563;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* 地图模式按钮 */
+.map-mode-btn {
+    padding: 0.75rem 0.5rem;
+    background-color: #374151;
+    border-radius: 0.5rem;
+    text-align: center;
+    transition: all 0.3s;
+    border: 2px solid transparent;
+    font-weight: bold;
+}
+
+.map-mode-btn:hover:not(:disabled) {
+    background-color: #4b5563;
+    transform: translateY(-2px);
+}
+
+.map-mode-btn.active {
+    background: linear-gradient(to right, #2563eb, #7c3aed);
+    color: white;
+    border-color: #3b82f6;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.map-mode-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background-color: #1f2937;
+}
+
+/* 干员筛选按钮 */
+.operator-filter-btn {
+    padding: 0.5rem 1rem;
+    background-color: #374151;
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+}
+
+.operator-filter-btn:hover {
+    background-color: #4b5563;
+}
+
+.operator-filter-btn.active {
+    background: linear-gradient(to right, #2563eb, #7c3aed);
+    color: white;
+}
+
+/* 快速问题按钮 */
+.quick-question-btn {
+    padding: 0.5rem 0.75rem;
+    background-color: #374151;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.quick-question-btn:hover {
+    background-color: #4b5563;
+}
+
+/* 自定义滑块 */
+.slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+    cursor: pointer;
+    border: 2px solid #1f2937;
+}
+
+.slider::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+    cursor: pointer;
+    border: 2px solid #1f2937;
+}
+
+/* 聊天消息样式 */
+.chat-message {
+    margin-bottom: 0.75rem;
+}
+
+.chat-message.user {
+    margin-left: auto;
+    max-width: 16rem;
+}
+
+.chat-message.ai {
+    margin-right: auto;
+    max-width: 16rem;
+}
+
+.chat-message.user .message-content {
+    background: linear-gradient(to right, #2563eb, #1d4ed8);
+    color: white;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    border-top-right-radius: 0;
+}
+
+.chat-message.ai .message-content {
+    background-color: #374151;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    border-top-left-radius: 0;
+}
+
+/* 卡片悬停效果 */
+.gear-card, .operator-card {
+    transition: all 0.3s;
+}
+
+.gear-card:hover, .operator-card:hover {
+    transform: translateY(-0.25rem);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* 进度条样式 */
+.progress-bar {
+    height: 0.5rem;
+    background-color: #374151;
+    border-radius: 9999px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(to right, #3b82f6, #8b5cf6);
+    transition: all 0.5s;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    .grid-cols-4 {
+        grid-template-columns: repeat(1, 1fr);
+    }
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background-color: #1f2937;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #4b5563;
+    border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: #6b7280;
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* 强度标签颜色 */
+.strength-S {
+    background: linear-gradient(to right, #7c3aed, #db2777);
+}
+
+.strength-A {
+    background: linear-gradient(to right, #dc2626, #ea580c);
+}
+
+.strength-B {
+    background: linear-gradient(to right, #ca8a04, #d97706);
+}
+
+.strength-C {
+    background: linear-gradient(to right, #16a34a, #059669);
+}
+
+.strength-D {
+    background-color: #4b5563;
+}
+
+/* 地图标签 */
+.map-tag-zero_dam {
+    background: linear-gradient(to right, #2563eb, #06b6d4);
+}
+
+.map-tag-aerospace_base {
+    background: linear-gradient(to right, #7c3aed, #db2777);
+}
+
+.map-tag-tidal_prison {
+    background: linear-gradient(to right, #dc2626, #ea580c);
+}
+
+.map-tag-longbow_valley {
+    background: linear-gradient(to right, #16a34a, #059669);
+}
+
+.map-tag-bukshi {
+    background: linear-gradient(to right, #ca8a04, #d97706);
+}
+
+/* 加载动画 */
+.loading-spinner {
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    border-top: 3px solid #3b82f6;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 渐变文字 */
+.gradient-text {
+    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* 价格样式 */
+.price-high {
+    color: #f87171;
+    font-weight: bold;
+}
+
+.price-medium {
+    color: #fbbf24;
+    font-weight: bold;
+}
+
+.price-low {
+    color: #34d399;
+    font-weight: bold;
+}
+
+/* 新增：玩家类型图标动画 */
+.player-type-btn.active .fa-mouse,
+.player-type-btn.active .fa-user-ninja,
+.player-type-btn.active .fa-fist-raised {
+    animation: bounce 0.5s;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+/* 新增：地图模式按钮颜色 */
+.map-mode-btn[data-mode="常规"] {
+    background-color: #374151;
+}
+
+.map-mode-btn[data-mode="机密"] {
+    background-color: #4c1d95;
+}
+
+.map-mode-btn[data-mode="绝密"] {
+    background-color: #7c2d12;
+}
+
+.map-mode-btn[data-mode="常规"]:hover:not(:disabled) {
+    background-color: #4b5563;
+}
+
+.map-mode-btn[data-mode="机密"]:hover:not(:disabled) {
+    background-color: #5b21b6;
+}
+
+.map-mode-btn[data-mode="绝密"]:hover:not(:disabled) {
+    background-color: #9a3412;
+}
+
+.bg-red-900\/30 {
+    background-color: rgba(127, 29, 29, 0.3);
+}
