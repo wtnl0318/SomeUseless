@@ -294,12 +294,11 @@
         </section>
         
         <!-- 关于 -->
-        <section id="about">
+        <section id="about" class="mt-12">
             <div class="flex items-center mb-6">
                 <div class="w-1 h-8 bg-purple-500 mr-3"></div>
                 <h2 class="text-2xl font-bold">📝 关于本项目</h2>
             </div>
-            
             <div class="bg-gray-800 rounded-xl p-6 shadow-lg">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div class="scroll-reveal">
@@ -391,6 +390,16 @@
             </div>
         </div>
     </footer>
+    
+    <!-- 背景音乐 -->
+    <audio id="bgMusic" loop>
+        <source src="video/main.mp3" type="audio/mpeg">
+    </audio>
+    
+    <!-- 按钮点击音效 -->
+    <audio id="buttonSound">
+        <source src="video/button.mp3" type="audio/mpeg">
+    </audio>
     
     <script src="script.js"></script>
 </body>

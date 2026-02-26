@@ -1,5 +1,85 @@
 // 三角洲配装助手 - 主逻辑文件
 
+// ========================================
+// 音频系统
+// ========================================
+const AudioSystem = {
+    bgMusic: null,
+    buttonSound: null,
+    isInitialized: false,
+    bgMusicStarted: false,
+    
+    init() {
+        if (this.isInitialized) return;
+        
+        this.bgMusic = document.getElementById('bgMusic');
+        this.buttonSound = document.getElementById('buttonSound');
+        
+        if (this.bgMusic) {
+            this.bgMusic.volume = 0.15;
+        }
+        
+        if (this.buttonSound) {
+            this.buttonSound.volume = 0.25;
+        }
+        
+        this.isInitialized = true;
+    },
+    
+    playBgMusic() {
+        this.init();
+        if (this.bgMusic && !this.bgMusicStarted) {
+            this.bgMusic.play().then(() => {
+                this.bgMusicStarted = true;
+                console.log('背景音乐开始播放');
+            }).catch(e => {
+                console.log('背景音乐自动播放被阻止，等待用户交互');
+            });
+        }
+    },
+    
+    playButtonSound() {
+        this.init();
+        if (this.buttonSound) {
+            this.buttonSound.currentTime = 0;
+            this.buttonSound.play().catch(e => {
+                console.log('按钮音效播放失败');
+            });
+        }
+    }
+};
+
+// 播放按钮点击音效的函数
+function playButtonSound() {
+    AudioSystem.playButtonSound();
+}
+
+// 干员名称到图片文件名的映射
+const operatorImageMap = {
+    "红狼（凯·席尔瓦）": "红狼.png",
+    "威龙（王宇昊）": "威龙.png",
+    "无名（埃利·德·蒙贝尔）": "无名.png",
+    "疾风（克莱尔·安·拜尔斯）": "疾风.png",
+    "蜂医（罗伊·斯米）": "蜂医.jpg",
+    "蛊（佐娅·庞琴科娃）": "蛊.jpg",
+    "蝶（莉娜·范德梅尔）": "蝶.png",
+    "露娜（金卢娜）": "露娜.png",
+    "骇爪（麦晓雯）": "骇爪.jpg",
+    "银翼（兰登·哈里森）": "银翼.png",
+    "牧羊人（泰瑞·缪萨）": "牧羊人.png",
+    "乌鲁鲁（大卫·费莱尔）": "乌鲁鲁.png",
+    "深蓝（阿列克谢·彼得罗夫）": "深蓝.png"
+};
+
+// 地图ID到图片文件名的映射
+const mapImageMap = {
+    "zero_dam": "零号大坝.png",
+    "aerospace_base": "航天基地.png",
+    "tidal_prison": "潮汐监狱.png",
+    "longbow_valley": "长弓溪谷.png",
+    "bukshi": "巴克什.png"
+};
+
 // 全局变量
 let currentBudget = 500000;
 let currentPlayerType = "鼠鼠";
@@ -8,6 +88,316 @@ let currentMode = "常规";
 let conversationHistory = [];
 let aiEnabled = false;
 let openaiApiKey = '';
+
+// 全局弹窗变量
+let currentModal = null;
+
+// ========================================
+// 增强通知系统 - Enhanced Notification System
+// ========================================
+
+const NotificationSystem = {
+    container: null,
+    notifications: [],
+    maxNotifications: 5,
+    defaultDuration: 5000,
+    
+    // 初始化通知容器
+    init() {
+        if (!this.container) {
+            this.container = document.createElement('div');
+            this.container.className = 'notification-container';
+            this.container.setAttribute('role', 'region');
+            this.container.setAttribute('aria-label', '通知区域');
+            document.body.appendChild(this.container);
+        }
+    },
+    
+    // 显示通知
+    show(message, options = {}) {
+        this.init();
+        
+        const {
+            type = 'info',
+            title = '',
+            duration = this.defaultDuration,
+            showProgress = true,
+            closable = true
+        } = options;
+        
+        // 如果超过最大数量，移除最旧的通知
+        if (this.notifications.length >= this.maxNotifications) {
+            const oldest = this.notifications[0];
+            this.dismiss(oldest.id);
+        }
+        
+        // 创建通知ID
+        const id = 'notification-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        
+        // 创建通知元素
+        const notification = document.createElement('div');
+        notification.id = id;
+        notification.className = `notification-item ${type}`;
+        notification.setAttribute('role', 'alert');
+        notification.setAttribute('aria-live', 'polite');
+        
+        // 图标映射
+        const icons = {
+            success: 'fa-check-circle',
+            error: 'fa-times-circle',
+            warning: 'fa-exclamation-triangle',
+            info: 'fa-info-circle'
+        };
+        
+        // 标题映射
+        const defaultTitles = {
+            success: '成功',
+            error: '错误',
+            warning: '警告',
+            info: '提示'
+        };
+        
+        const displayTitle = title || defaultTitles[type];
+        const icon = icons[type] || icons.info;
+        
+        // 构建通知HTML
+        notification.innerHTML = `
+            <div class="notification-icon">
+                <i class="fas ${icon}"></i>
+            </div>
+            <div class="notification-content">
+                ${displayTitle ? `<span class="notification-title">${displayTitle}</span>` : ''}
+                <span>${message}</span>
+            </div>
+            ${closable ? `
+                <button class="notification-close" aria-label="关闭通知" onclick="NotificationSystem.dismiss('${id}')">
+                    <i class="fas fa-times"></i>
+                </button>
+            ` : ''}
+            ${showProgress ? `<div class="notification-progress" style="width: 100%;"></div>` : ''}
+        `;
+        
+        // 添加到容器
+        this.container.appendChild(notification);
+        
+        // 存储通知信息
+        const notificationData = {
+            id,
+            element: notification,
+            startTime: Date.now(),
+            duration,
+            timer: null
+        };
+        
+        this.notifications.push(notificationData);
+        
+        // 触发动画
+        requestAnimationFrame(() => {
+            notification.classList.add('show');
+        });
+        
+        // 进度条动画
+        if (showProgress && duration > 0) {
+            const progressBar = notification.querySelector('.notification-progress');
+            if (progressBar) {
+                // 使用CSS transition实现平滑的进度条
+                requestAnimationFrame(() => {
+                    progressBar.style.transition = `width ${duration}ms linear`;
+                    progressBar.style.width = '0%';
+                });
+            }
+        }
+        
+        // 自动关闭
+        if (duration > 0) {
+            notificationData.timer = setTimeout(() => {
+                this.dismiss(id);
+            }, duration);
+        }
+        
+        // 鼠标悬停时暂停计时
+        notification.addEventListener('mouseenter', () => {
+            if (notificationData.timer) {
+                clearTimeout(notificationData.timer);
+                notificationData.timer = null;
+                // 暂停进度条
+                const progressBar = notification.querySelector('.notification-progress');
+                if (progressBar) {
+                    const computedStyle = window.getComputedStyle(progressBar);
+                    const currentWidth = computedStyle.width;
+                    progressBar.style.transition = 'none';
+                    progressBar.style.width = currentWidth;
+                }
+            }
+        });
+        
+        // 鼠标离开时恢复计时
+        notification.addEventListener('mouseleave', () => {
+            const progressBar = notification.querySelector('.notification-progress');
+            if (progressBar) {
+                const remainingTime = duration * (parseFloat(progressBar.style.width) / 100);
+                progressBar.style.transition = `width ${remainingTime}ms linear`;
+                progressBar.style.width = '0%';
+                
+                notificationData.timer = setTimeout(() => {
+                    this.dismiss(id);
+                }, remainingTime);
+            }
+        });
+        
+        return id;
+    },
+    
+    // 关闭通知
+    dismiss(id) {
+        const index = this.notifications.findIndex(n => n.id === id);
+        if (index === -1) return;
+        
+        const notification = this.notifications[index];
+        
+        // 清除计时器
+        if (notification.timer) {
+            clearTimeout(notification.timer);
+        }
+        
+        // 添加退出动画
+        notification.element.classList.remove('show');
+        notification.element.classList.add('hide');
+        
+        // 动画结束后移除元素
+        setTimeout(() => {
+            if (notification.element.parentNode) {
+                notification.element.parentNode.removeChild(notification.element);
+            }
+            this.notifications.splice(index, 1);
+        }, 250);
+    },
+    
+    // 关闭所有通知
+    dismissAll() {
+        [...this.notifications].forEach(n => this.dismiss(n.id));
+    },
+    
+    // 快捷方法
+    success(message, options = {}) {
+        return this.show(message, { ...options, type: 'success' });
+    },
+    
+    error(message, options = {}) {
+        return this.show(message, { ...options, type: 'error' });
+    },
+    
+    warning(message, options = {}) {
+        return this.show(message, { ...options, type: 'warning' });
+    },
+    
+    info(message, options = {}) {
+        return this.show(message, { ...options, type: 'info' });
+    }
+};
+
+// 打开弹窗
+function openModal(content) {
+    closeModal();
+    
+    const modal = document.createElement('div');
+    modal.id = 'operatorModal';
+    modal.innerHTML = content;
+    document.body.appendChild(modal);
+    
+    currentModal = modal;
+    document.body.style.overflow = 'hidden';
+    document.body.classList.add('modal-open');
+    
+    setTimeout(() => {
+        modal.classList.add('show');
+    }, 10);
+}
+
+// 关闭弹窗
+function closeModal() {
+    const modal = document.getElementById('operatorModal');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => {
+            modal.remove();
+            document.body.style.overflow = '';
+            document.body.classList.remove('modal-open');
+            currentModal = null;
+        }, 300);
+    }
+}
+
+// 显示干员详情
+function showOperatorDetail(index) {
+    const op = localOperatorsData[index];
+    if (!op) return;
+    
+    const modalHtml = `
+        <div class="modal-overlay" onclick="closeModal()"></div>
+        <div class="modal-container" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title">${op.name}</h2>
+                    <p class="modal-subtitle"><i class="fas fa-user mr-2"></i>${op.type}干员</p>
+                </div>
+                <button onclick="closeModal()" class="modal-close-btn" aria-label="关闭">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-content">
+                <div class="modal-section">
+                    <h3 class="modal-section-title">
+                        <i class="fas fa-book-open"></i>背景介绍
+                    </h3>
+                    <div class="modal-info-card">
+                        <p class="modal-text-primary">${op.background || '暂无背景信息'}</p>
+                    </div>
+                </div>
+                
+                <div class="modal-section">
+                    <h3 class="modal-section-title">
+                        <i class="fas fa-magic"></i>技能信息
+                    </h3>
+                    <div class="modal-grid modal-grid-2">
+                        ${op.skills ? Object.entries(op.skills).map(([key, value]) => `
+                            <div class="modal-skill-card">
+                                <p class="modal-skill-name"><i class="fas fa-star mr-2"></i>${getSkillName(key)}</p>
+                                <p class="modal-skill-desc">${value}</p>
+                            </div>
+                        `).join('') : '<p class="modal-text-muted">暂无技能信息</p>'}
+                    </div>
+                </div>
+                
+                <div class="modal-section">
+                    <h3 class="modal-section-title">
+                        <i class="fas fa-chart-line"></i>玩法适配度
+                    </h3>
+                    <div class="modal-grid">
+                        ${op.suitable_for_players ? Object.entries(op.suitable_for_players).map(([type, data]) => `
+                            <div class="modal-suitability-card">
+                                <div class="modal-suitability-header">
+                                    <span class="modal-suitability-type">${type}</span>
+                                    <span class="modal-suitability-badge ${data.suitability}">${data.suitability}级</span>
+                                </div>
+                                <p class="modal-suitability-reason">${data.reason}</p>
+                            </div>
+                        `).join('') : '<p class="modal-text-muted">暂无适配度信息</p>'}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button onclick="closeModal()" class="modal-action-btn modal-primary-btn">
+                    <i class="fas fa-check mr-2"></i>我知道了
+                </button>
+            </div>
+        </div>
+    `;
+    
+    openModal(modalHtml);
+}
 
 // 滚动动画效果
 function initScrollReveal() {
@@ -30,11 +420,16 @@ function initScrollReveal() {
 }
 
 // 导航栏联动
+let isScrollingToSection = false;
+let scrollTimeout = null;
+
 function initNavbarSync() {
     const navLinks = document.querySelectorAll('.nav-link');
     const sections = document.querySelectorAll('section');
     
     window.addEventListener('scroll', () => {
+        if (isScrollingToSection) return;
+        
         let current = '';
         
         sections.forEach(section => {
@@ -1218,11 +1613,38 @@ const localMapsData = [
 document.addEventListener('DOMContentLoaded', function() {
     console.log("三角洲配装助手初始化...");
     
+    // 初始化音频系统
+    AudioSystem.init();
+    
+    // 延迟1秒后播放背景音乐
+    setTimeout(() => {
+        AudioSystem.playBgMusic();
+    }, 1000);
+    
+    // 如果自动播放失败，等待用户首次交互
+    document.addEventListener('click', function startBgMusic() {
+        if (!AudioSystem.bgMusicStarted) {
+            AudioSystem.playBgMusic();
+        }
+    }, { once: false });
+    
+    // 为所有按钮添加点击音效
+    document.addEventListener('click', function(e) {
+        const target = e.target;
+        const button = target.closest('button, .player-type-btn, .map-mode-btn, .operator-filter-btn, .quick-question-btn, .nav-link, .modal-close-btn, .modal-action-btn, .notification-close, input[type="submit"], .gear-card, .operator-card');
+        if (button) {
+            playButtonSound();
+        }
+    }, true);
+    
     // 初始化事件监听器
     initEventListeners();
     
     // 初始化地图模式
     updateMapModes();
+    
+    // 初始化地图图片
+    updateMapImage();
     
     // 加载干员信息
     loadOperators();
@@ -1269,6 +1691,7 @@ function initEventListeners() {
     document.getElementById('mapSelect').addEventListener('change', function() {
         currentMap = this.value;
         updateMapModes();
+        updateMapImage();
         showFeedback(`已选择地图: ${getMapName(currentMap)}`);
     });
     
@@ -1323,6 +1746,8 @@ function initEventListeners() {
     document.querySelectorAll('.nav-link').forEach(link => {
         link.addEventListener('click', function(e) {
             e.preventDefault();
+            
+            // 立即更新导航高亮
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             this.classList.add('active');
             
@@ -1330,7 +1755,52 @@ function initEventListeners() {
             const targetId = this.getAttribute('href').substring(1);
             const targetElement = document.getElementById(targetId);
             if (targetElement) {
+                isScrollingToSection = true;
+                
+                // 清除之前的定时器
+                if (scrollTimeout) {
+                    clearTimeout(scrollTimeout);
+                }
+                
                 targetElement.scrollIntoView({ behavior: 'smooth' });
+                
+                // 使用滚动事件检测滚动是否真正停止
+                let lastScrollTop = window.pageYOffset;
+                let scrollCheckCount = 0;
+                
+                const checkScrollStopped = () => {
+                    const currentScrollTop = window.pageYOffset;
+                    
+                    if (Math.abs(currentScrollTop - lastScrollTop) < 1) {
+                        scrollCheckCount++;
+                        // 如果连续3次检测滚动位置没有变化,说明滚动已停止
+                        if (scrollCheckCount >= 3) {
+                            isScrollingToSection = false;
+                            window.removeEventListener('scroll', onScroll);
+                            if (scrollTimeout) {
+                                clearTimeout(scrollTimeout);
+                            }
+                        } else {
+                            scrollTimeout = setTimeout(checkScrollStopped, 100);
+                        }
+                    } else {
+                        scrollCheckCount = 0;
+                        lastScrollTop = currentScrollTop;
+                        scrollTimeout = setTimeout(checkScrollStopped, 100);
+                    }
+                };
+                
+                const onScroll = () => {
+                    if (isScrollingToSection) {
+                        if (scrollTimeout) {
+                            clearTimeout(scrollTimeout);
+                        }
+                        scrollTimeout = setTimeout(checkScrollStopped, 100);
+                    }
+                };
+                
+                window.addEventListener('scroll', onScroll);
+                scrollTimeout = setTimeout(checkScrollStopped, 500);
             }
         });
     });
@@ -1454,10 +1924,18 @@ async function preloadData() {
         
         // 显示加载状态
         const loadoutResult = document.getElementById('loadoutResult');
+        loadoutResult.classList.add('p-0');
         loadoutResult.innerHTML = `
-            <div class="text-center py-10">
-                <div class="loading-spinner mb-4"></div>
-                <p class="text-gray-400">正在加载游戏数据...</p>
+            <div class="relative w-full h-full min-h-[400px] rounded-xl overflow-hidden">
+                <img src="地图图片/默认.png" 
+                     alt="默认地图" 
+                     class="absolute inset-0 w-full h-full object-cover opacity-30">
+                <div class="relative z-10 flex items-center justify-center w-full h-full min-h-[400px]">
+                    <div class="text-center">
+                        <div class="loading-spinner mb-4"></div>
+                        <p class="text-gray-400">正在加载游戏数据...</p>
+                    </div>
+                </div>
             </div>
         `;
         
@@ -1477,14 +1955,22 @@ async function preloadData() {
         console.log("游戏数据加载完成！", gameData);
         
         // 更新UI显示数据已加载
+        loadoutResult.classList.add('p-0');
         loadoutResult.innerHTML = `
-            <div class="text-center py-6">
-                <div class="w-16 h-16 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-check text-2xl"></i>
+            <div class="relative w-full h-full min-h-[400px] rounded-xl overflow-hidden">
+                <img src="地图图片/默认.png" 
+                     alt="默认地图" 
+                     class="absolute inset-0 w-full h-full object-cover opacity-30">
+                <div class="relative z-10 flex items-center justify-center w-full h-full min-h-[400px]">
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-check text-2xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold mb-2">数据加载完成</h3>
+                        <p class="text-gray-400 mb-2">已加载 ${gameData.weapons.length} 把武器, ${gameData.operators.length} 名干员</p>
+                        <p class="text-gray-500">请设置参数后点击"生成配装方案"</p>
+                    </div>
                 </div>
-                <h3 class="text-xl font-bold mb-2">数据加载完成</h3>
-                <p class="text-gray-400 mb-6">已加载 ${gameData.weapons.length} 把武器, ${gameData.operators.length} 名干员</p>
-                <p class="text-gray-500">请设置参数后点击"生成配装方案"</p>
             </div>
         `;
         
@@ -1496,16 +1982,24 @@ async function preloadData() {
         
         // 显示错误信息
         const loadoutResult = document.getElementById('loadoutResult');
+        loadoutResult.classList.add('p-0');
         loadoutResult.innerHTML = `
-            <div class="text-center py-10">
-                <div class="w-16 h-16 bg-gradient-to-r from-red-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-exclamation-triangle text-2xl"></i>
+            <div class="relative w-full h-full min-h-[400px] rounded-xl overflow-hidden">
+                <img src="地图图片/默认.png" 
+                     alt="默认地图" 
+                     class="absolute inset-0 w-full h-full object-cover opacity-30">
+                <div class="relative z-10 flex items-center justify-center w-full h-full min-h-[400px]">
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-gradient-to-r from-red-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-exclamation-triangle text-2xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold mb-2">数据加载失败</h3>
+                        <p class="text-gray-400 mb-4">${error.message || "未知错误"}</p>
+                        <button onclick="preloadData()" class="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-all">
+                            重新加载
+                        </button>
+                    </div>
                 </div>
-                <h3 class="text-xl font-bold mb-2">数据加载失败</h3>
-                <p class="text-gray-400 mb-4">${error.message || "未知错误"}</p>
-                <button onclick="preloadData()" class="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-all">
-                    重新加载
-                </button>
             </div>
         `;
     }
@@ -1538,35 +2032,46 @@ function loadOperators() {
             (op.skills.main.length > 50 ? op.skills.main.substring(0, 50) + "..." : op.skills.main) : 
             "暂无技能描述";
         
+        const imageFileName = operatorImageMap[op.name];
+        const imagePath = imageFileName ? `干员图片/${imageFileName}` : '';
+        
         html += `
-            <div class="operator-card bg-gray-800 rounded-xl p-5" data-type="${op.type}">
-                <div class="flex justify-between items-start mb-4">
-                    <div>
-                        <h3 class="font-bold text-lg">${op.name}</h3>
-                        <p class="text-gray-400">${op.type}干员</p>
-                    </div>
-                    ${suitability ? `
-                    <span class="px-3 py-1 ${getSuitabilityClass(suitability)} rounded-full text-sm">
-                        ${suitability}
-                    </span>
-                    ` : ''}
+            <div class="operator-card bg-gray-800 rounded-xl overflow-hidden" data-type="${op.type}">
+                ${imagePath ? `
+                <div class="operator-card-image-container">
+                    <img src="${imagePath}" alt="${op.name}" class="operator-card-image" loading="lazy">
+                    <div class="operator-card-image-overlay"></div>
                 </div>
-                
-                <p class="text-gray-300 mb-4 text-sm">${op.background || '暂无简介'}</p>
-                
-                <div class="mb-4">
-                    <p class="font-bold mb-2 text-sm">主要技能</p>
-                    <p class="text-sm text-gray-400">${skillDesc}</p>
-                </div>
-                
-                <div class="flex justify-between items-center text-sm">
-                    <div class="text-gray-500">
-                        <i class="fas fa-tag mr-2"></i>
-                        <span>${op.type}</span>
+                ` : ''}
+                <div class="p-5">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="font-bold text-lg">${op.name}</h3>
+                            <p class="text-gray-400">${op.type}干员</p>
+                        </div>
+                        ${suitability ? `
+                        <span class="px-3 py-1 ${getSuitabilityClass(suitability)} rounded-full text-sm">
+                            ${suitability}
+                        </span>
+                        ` : ''}
                     </div>
-                    <button onclick="showOperatorDetail(${index})" class="text-blue-400 hover:text-blue-300 text-sm">
-                        查看详情 <i class="fas fa-arrow-right ml-1"></i>
-                    </button>
+                    
+                    <p class="text-gray-300 mb-4 text-sm">${op.background || '暂无简介'}</p>
+                    
+                    <div class="mb-4">
+                        <p class="font-bold mb-2 text-sm">主要技能</p>
+                        <p class="text-sm text-gray-400">${skillDesc}</p>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-sm">
+                        <div class="text-gray-500">
+                            <i class="fas fa-tag mr-2"></i>
+                            <span>${op.type}</span>
+                        </div>
+                        <button onclick="showOperatorDetail(${index})" class="text-blue-400 hover:text-blue-300 text-sm">
+                            查看详情 <i class="fas fa-arrow-right ml-1"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
@@ -1588,86 +2093,7 @@ function loadOperators() {
     }
 }
 
-// 显示干员详情
-function showOperatorDetail(index) {
-    const op = localOperatorsData[index];
-    if (!op) return;
-    
-    const modalHtml = `
-        <div id="operatorModalOverlay" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center;">
-            <div class="bg-gray-800 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto" style="max-height: 90vh;">
-                <div class="flex justify-between items-start mb-6">
-                    <div>
-                        <h2 class="text-2xl font-bold">${op.name}</h2>
-                        <p class="text-gray-400">${op.type}干员</p>
-                    </div>
-                    <button onclick="closeModal()" class="text-gray-400 hover:text-white text-2xl">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                
-                <div class="mb-6">
-                    <h3 class="text-lg font-bold mb-3">背景介绍</h3>
-                    <p class="text-gray-300">${op.background || '暂无背景信息'}</p>
-                </div>
-                
-                <div class="mb-6">
-                    <h3 class="text-lg font-bold mb-3">技能信息</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        ${op.skills ? Object.entries(op.skills).map(([key, value]) => `
-                            <div class="bg-gray-700 p-4 rounded-lg">
-                                <p class="font-bold text-blue-300 mb-2">${getSkillName(key)}</p>
-                                <p class="text-sm">${value}</p>
-                            </div>
-                        `).join('') : '<p class="text-gray-400">暂无技能信息</p>'}
-                    </div>
-                </div>
-                
-                <div class="mb-6">
-                    <h3 class="text-lg font-bold mb-3">玩法适配度</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        ${op.suitable_for_players ? Object.entries(op.suitable_for_players).map(([type, data]) => `
-                            <div class="bg-gray-700 p-4 rounded-lg">
-                                <div class="flex justify-between items-center mb-2">
-                                    <p class="font-bold">${type}</p>
-                                    <span class="px-3 py-1 ${getSuitabilityClass(data.suitability)} rounded-full text-sm">
-                                        ${data.suitability}级
-                                    </span>
-                                </div>
-                                <p class="text-sm text-gray-300">${data.reason}</p>
-                            </div>
-                        `).join('') : '<p class="text-gray-400">暂无适配度信息</p>'}
-                    </div>
-                </div>
-                
-                <div class="text-center mt-6">
-                    <button onclick="closeModal()" class="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all">
-                        关闭详情
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // 禁止背景滚动
-    document.body.style.overflow = 'hidden';
-    
-    // 创建模态框
-    const modal = document.createElement('div');
-    modal.id = 'operatorModal';
-    modal.innerHTML = modalHtml;
-    document.body.appendChild(modal);
-}
 
-// 关闭模态框
-function closeModal() {
-    const modal = document.getElementById('operatorModal');
-    if (modal) {
-        modal.remove();
-        // 恢复背景滚动
-        document.body.style.overflow = '';
-    }
-}
 
 // 获取技能名称
 function getSkillName(key) {
@@ -1904,32 +2330,56 @@ if (playerType === "猛攻流") {
     const requirements = mapModeRequirements[currentMap][currentMode];
     
     if (currentBudget < requirements.min) {
-        alert(`预算不足！${getMapName(currentMap)}的${currentMode}模式要求最低${formatPrice(requirements.min)}`);
+        showFeedback(`预算不足！${getMapName(currentMap)}的${currentMode}模式要求最低${formatPrice(requirements.min)}`, 'error');
         return;
     }
     
     // 显示加载状态
     const loadoutResult = document.getElementById('loadoutResult');
+    const mapName = getMapName(currentMap);
+    loadoutResult.classList.add('p-0');
     loadoutResult.innerHTML = `
-        <div class="text-center py-10">
-            <div class="loading-spinner mb-4"></div>
-            <p class="text-gray-400">正在生成${currentPlayerType}配装方案...</p>
-            <p class="text-sm text-gray-500 mt-2">预算: ${formatPrice(currentBudget)}</p>
+        <div class="relative w-full h-full min-h-[400px] rounded-xl overflow-hidden">
+            <img src="地图图片/${mapName}.png" 
+                 alt="${mapName}" 
+                 class="absolute inset-0 w-full h-full object-cover opacity-30"
+                 onerror="this.src='地图图片/默认.png'">
+            <div class="relative z-10 flex items-center justify-center w-full h-full min-h-[400px]">
+                <div class="text-center">
+                    <div class="loading-spinner mb-4"></div>
+                    <p class="text-gray-400">正在生成${currentPlayerType}配装方案...</p>
+                    <p class="text-sm text-gray-500 mt-2">预算: ${formatPrice(currentBudget)}</p>
+                </div>
+                </div>
+                </div>
+                </div>
+            </div>
         </div>
     `;
+    
+    // 添加1.5秒的延迟，让用户看到加载状态
+    await new Promise(resolve => setTimeout(resolve, 1500));
     
     // 设置超时保护（5秒）
     const timeout = setTimeout(() => {
         loadoutResult.innerHTML = `
-            <div class="text-center py-10">
-                <div class="w-16 h-16 bg-gradient-to-r from-red-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-exclamation-triangle text-2xl"></i>
+            <div class="relative w-full h-full min-h-[400px] rounded-xl overflow-hidden">
+                <img src="地图图片/${mapName}.png" 
+                     alt="${mapName}" 
+                     class="absolute inset-0 w-full h-full object-cover opacity-30"
+                     onerror="this.src='地图图片/默认.png'">
+                <div class="relative z-10 flex items-center justify-center w-full h-full min-h-[400px]">
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-gradient-to-r from-red-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-exclamation-triangle text-2xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold mb-2">生成超时</h3>
+                        <p class="text-gray-400 mb-4">配装生成时间过长，请尝试调整预算或重新生成</p>
+                        <button onclick="generateLoadout()" class="px-6 py-3 bg-blue-600 rounded-lg hover:bg-blue-700 transition-all">
+                            重新生成
+                        </button>
+                    </div>
                 </div>
-                <h3 class="text-xl font-bold mb-2">生成超时</h3>
-                <p class="text-gray-400 mb-4">配装生成时间过长，请尝试调整预算或重新生成</p>
-                <button onclick="generateLoadout()" class="px-6 py-3 bg-blue-600 rounded-lg hover:bg-blue-700 transition-all">
-                    重新生成
-                </button>
             </div>
         `;
     }, 5000);
@@ -2015,19 +2465,27 @@ if (playerType === "猛攻流") {
         console.error("备选方案也失败:", fallbackError);
         
         loadoutResult.innerHTML = `
-            <div class="text-center py-10">
-                <div class="w-16 h-16 bg-gradient-to-r from-red-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-exclamation-triangle text-2xl"></i>
-                </div>
-                <h3 class="text-xl font-bold mb-2">生成失败</h3>
-                <p class="text-gray-400 mb-4">${error.message || "未知错误"}</p>
-                <div class="flex justify-center gap-4">
-                    <button onclick="generateLoadout()" class="px-6 py-3 bg-blue-600 rounded-lg hover:bg-blue-700 transition-all">
-                        重新生成
-                    </button>
-                    <button onclick="currentBudget = Math.min(currentBudget * 1.2, 5000000); document.getElementById('budgetSlider').value = currentBudget; document.getElementById('budgetValue').textContent = formatPrice(currentBudget); generateLoadout()" class="px-6 py-3 bg-green-600 rounded-lg hover:bg-green-700 transition-all">
-                        增加预算再试
-                    </button>
+            <div class="relative w-full h-full min-h-[400px] rounded-xl overflow-hidden">
+                <img src="地图图片/${mapName}.png" 
+                     alt="${mapName}" 
+                     class="absolute inset-0 w-full h-full object-cover opacity-30"
+                     onerror="this.src='地图图片/默认.png'">
+                <div class="relative z-10 flex items-center justify-center w-full h-full min-h-[400px]">
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-gradient-to-r from-red-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-exclamation-triangle text-2xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold mb-2">生成失败</h3>
+                        <p class="text-gray-400 mb-4">${error.message || "未知错误"}</p>
+                        <div class="flex justify-center gap-4">
+                            <button onclick="generateLoadout()" class="px-6 py-3 bg-blue-600 rounded-lg hover:bg-blue-700 transition-all">
+                                重新生成
+                            </button>
+                            <button onclick="currentBudget = Math.min(currentBudget * 1.2, 5000000); document.getElementById('budgetSlider').value = currentBudget; document.getElementById('budgetValue').textContent = formatPrice(currentBudget); generateLoadout()" class="px-6 py-3 bg-green-600 rounded-lg hover:bg-green-700 transition-all">
+                                增加预算再试
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -3457,7 +3915,12 @@ function displayLoadout(weapon, gear, operators, budgetAllocation, totalCost) {
             </div>
             
             <!-- 地图战术建议 -->
-            <div class="bg-gradient-to-r from-blue-900/30 to-purple-900/30 rounded-xl p-6 border border-blue-800/30">
+            <div class="relative rounded-xl overflow-hidden border border-blue-800/30">
+                <img src="地图图片/${mapName}.png" 
+                     alt="${mapName}" 
+                     class="absolute inset-0 w-full h-full object-cover opacity-30"
+                     onerror="this.src='地图图片/默认.png'">
+                <div class="relative z-10 p-6">
                 <h4 class="text-xl font-bold mb-4 flex items-center">
                     <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center mr-3">
                         <i class="fas fa-map-marked-alt"></i>
@@ -3486,10 +3949,12 @@ function displayLoadout(weapon, gear, operators, budgetAllocation, totalCost) {
                         </p>
                     </div>
                 </div>
+                </div>
             </div>
         </div>
     `;          
     
+    container.classList.remove('p-0');
     container.innerHTML = html;
     
     // 滚动到结果区域
@@ -3953,6 +4418,21 @@ function getMapTagClass(mapId) {
     return `map-tag-${mapId}`;
 }
 
+// 更新地图图片
+function updateMapImage() {
+    const mapImage = document.getElementById('mapImage');
+    if (!mapImage) return;
+    
+    const imageFileName = mapImageMap[currentMap];
+    const imagePath = imageFileName ? `地图图片/${imageFileName}` : '地图图片/默认.png';
+    
+    mapImage.style.opacity = '0';
+    setTimeout(() => {
+        mapImage.src = imagePath;
+        mapImage.style.opacity = '1';
+    }, 150);
+}
+
 // 获取装备类型名称
 function getGearTypeName(type) {
     const names = {
@@ -3975,72 +4455,25 @@ function getGearIcon(type) {
     return icons[type] || "box";
 }
 
-// 显示反馈提示
+// 显示反馈提示 - 使用增强通知系统
 function showFeedback(message, type = 'success') {
-    // 创建提示元素
-    const feedback = document.createElement('div');
-    feedback.id = 'feedbackMessage';
+    // 映射类型到NotificationSystem的类型
+    const typeMap = {
+        'success': 'success',
+        'error': 'error',
+        'info': 'info',
+        'warning': 'warning'
+    };
     
-    // 设置样式
-    feedback.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        padding: 16px 24px;
-        border-radius: 12px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        z-index: 9999;
-        transform: translateY(100px);
-        opacity: 0;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        font-weight: 500;
-        max-width: 350px;
-    `;
+    const notificationType = typeMap[type] || 'info';
     
-    // 根据类型设置颜色
-    if (type === 'success') {
-        feedback.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-        feedback.style.color = 'white';
-    } else if (type === 'error') {
-        feedback.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
-        feedback.style.color = 'white';
-    } else if (type === 'info') {
-        feedback.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)';
-        feedback.style.color = 'white';
-    } else {
-        feedback.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-        feedback.style.color = 'white';
-    }
-    
-    // 设置内容
-    const icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle';
-    feedback.innerHTML = `
-        <i class="fas ${icon}" style="font-size: 1.25rem;"></i>
-        <span>${message}</span>
-    `;
-    
-    // 添加到页面
-    document.body.appendChild(feedback);
-    
-    // 显示动画
-    requestAnimationFrame(() => {
-        feedback.style.transform = 'translateY(0)';
-        feedback.style.opacity = '1';
+    // 使用新的通知系统
+    NotificationSystem.show(message, {
+        type: notificationType,
+        duration: 2500,
+        showProgress: true,
+        closable: true
     });
-    
-    // 3秒后隐藏
-    setTimeout(() => {
-        feedback.style.transform = 'translateY(100px)';
-        feedback.style.opacity = '0';
-        setTimeout(() => {
-            if (feedback.parentNode) {
-                feedback.parentNode.removeChild(feedback);
-            }
-        }, 400);
-    }, 3000);
 }
 
 // 复制改枪码
@@ -4049,7 +4482,7 @@ function copyCode(code) {
         showFeedback('改枪码已复制到剪贴板！');
     }).catch(err => {
         console.error('复制失败:', err);
-        alert('复制失败，请手动选择并复制代码');
+        showFeedback('复制失败，请手动选择并复制代码', 'error');
     });
 }
 
