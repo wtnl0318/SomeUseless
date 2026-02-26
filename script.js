@@ -5,6 +5,86 @@ let currentBudget = 500000;
 let currentPlayerType = "鼠鼠";
 let currentMap = "zero_dam";
 let currentMode = "常规";
+let conversationHistory = [];
+let aiEnabled = false;
+let openaiApiKey = '';
+
+// 滚动动画效果
+function initScrollReveal() {
+    const elements = document.querySelectorAll('.scroll-reveal');
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('active');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, {
+        threshold: 0.1
+    });
+    
+    elements.forEach(element => {
+        observer.observe(element);
+    });
+}
+
+// 导航栏联动
+function initNavbarSync() {
+    const navLinks = document.querySelectorAll('.nav-link');
+    const sections = document.querySelectorAll('section');
+    
+    window.addEventListener('scroll', () => {
+        let current = '';
+        
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop;
+            const sectionHeight = section.clientHeight;
+            if (pageYOffset >= sectionTop - 100) {
+                current = section.getAttribute('id');
+            }
+        });
+        
+        navLinks.forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('href').substring(1) === current) {
+                link.classList.add('active');
+            }
+        });
+    });
+}
+
+// 视差滚动效果
+function initParallax() {
+    window.addEventListener('scroll', () => {
+        const scrolled = window.pageYOffset;
+        const parallaxElements = document.querySelectorAll('.parallax-bg');
+        
+        parallaxElements.forEach(element => {
+            const speed = 0.5;
+            element.style.transform = `translateY(${scrolled * speed}px)`;
+        });
+    });
+}
+
+// 页面加载完成后初始化
+window.addEventListener('DOMContentLoaded', function() {
+    initScrollReveal();
+    initNavbarSync();
+    initParallax();
+    
+    // 为所有section添加滚动动画
+    document.querySelectorAll('section').forEach(section => {
+        section.classList.add('scroll-reveal');
+    });
+    
+    // 延迟触发动画，确保IntersectionObserver正确工作
+    setTimeout(() => {
+        document.querySelectorAll('.scroll-reveal').forEach(element => {
+            element.classList.add('active');
+        });
+    }, 100);
+});
 
 // 地图模式限制数据
 const mapModeRequirements = {
@@ -384,7 +464,7 @@ const localGearData = {
         "name": "GN重型夜视头",
         "type": "头盔",
         "level": 5,
-        "price": 600000,
+        "price": 172166,
         "strength": "S",
         "pros": "无遮挡视野，夜视功能，防护等级高",
         "cons": "价格昂贵，重量较大",
@@ -396,7 +476,7 @@ const localGearData = {
         "name": "4级听力头",
         "type": "头盔",
         "level": 4,
-        "price": 200000,
+        "price": 130062,
         "strength": "A",
         "pros": "提供20%听力加成，防护等级中等",
         "cons": "价格较高，赛季中可能涨价",
@@ -420,11 +500,12 @@ const localGearData = {
         "name": "MC201防弹头盔",
         "type": "头盔",
         "level": 3,
-        "price": 40000,
+        "price": 124951,
         "strength": "B",
         "pros": "提供20%听力buff，价格适中",
         "cons": "防护等级较低",
         "suitable_for": ["经济配置", "低风险任务"],
+
         "tags": ["三级头", "听力增强", "经济型"]
       }
   ],
@@ -435,7 +516,7 @@ const localGearData = {
         "name": "TGH防弹衣",
         "type": "护甲",
         "level": 3,
-        "price": 63000,
+        "price": 39715,
         "strength": "A",
         "pros": "无瞄准速度惩罚，轻微移速影响，新手首选",
         "cons": "防护等级较低",
@@ -447,7 +528,7 @@ const localGearData = {
         "name": "MK-2战术背心",
         "type": "护甲",
         "level": 4,
-        "price": 195000,
+        "price": 154502,
         "strength": "A",
         "pros": "满耐久110点，维修损失9%上限，均衡首选",
         "cons": "价格较高",
@@ -1255,32 +1336,6 @@ function initEventListeners() {
     });
 }
 
-// 显示反馈消息
-function showFeedback(message) {
-    // 创建或获取反馈元素
-    let feedback = document.getElementById('feedbackMessage');
-    if (!feedback) {
-        feedback = document.createElement('div');
-        feedback.id = 'feedbackMessage';
-        feedback.className = 'fixed bottom-4 right-4 bg-gray-800 text-white p-4 rounded-lg shadow-lg z-50 max-w-sm';
-        document.body.appendChild(feedback);
-    }
-    
-    feedback.innerHTML = `
-        <div class="flex items-center">
-            <i class="fas fa-check-circle text-green-500 mr-3 text-xl"></i>
-            <span>${message}</span>
-        </div>
-    `;
-    
-    // 3秒后自动消失
-    setTimeout(() => {
-        feedback.style.opacity = '0';
-        feedback.style.transition = 'opacity 0.5s';
-        setTimeout(() => feedback.remove(), 500);
-    }, 3000);
-}
-
 // 更新地图模式选择
 function updateMapModes() {
     const modes = mapModeRequirements[currentMap];
@@ -1473,8 +1528,10 @@ function loadOperators() {
     
     localOperatorsData.forEach((op, index) => {
         // 获取对鼠鼠玩法的适配度作为示例
-        const suitability = op.suitable_for_players && op.suitable_for_players["鼠鼠"] ? 
-                          op.suitable_for_players["鼠鼠"].suitability : "未知";
+        let suitability = null;
+        if (op.suitable_for_players && op.suitable_for_players["鼠鼠"]) {
+            suitability = op.suitable_for_players["鼠鼠"].suitability;
+        }
         
         // 获取技能描述的前50个字符
         const skillDesc = op.skills?.main ? 
@@ -1488,9 +1545,11 @@ function loadOperators() {
                         <h3 class="font-bold text-lg">${op.name}</h3>
                         <p class="text-gray-400">${op.type}干员</p>
                     </div>
+                    ${suitability ? `
                     <span class="px-3 py-1 ${getSuitabilityClass(suitability)} rounded-full text-sm">
                         ${suitability}
                     </span>
+                    ` : ''}
                 </div>
                 
                 <p class="text-gray-300 mb-4 text-sm">${op.background || '暂无简介'}</p>
@@ -1535,8 +1594,8 @@ function showOperatorDetail(index) {
     if (!op) return;
     
     const modalHtml = `
-        <div class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-            <div class="bg-gray-800 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div id="operatorModalOverlay" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center;">
+            <div class="bg-gray-800 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto" style="max-height: 90vh;">
                 <div class="flex justify-between items-start mb-6">
                     <div>
                         <h2 class="text-2xl font-bold">${op.name}</h2>
@@ -1590,6 +1649,9 @@ function showOperatorDetail(index) {
         </div>
     `;
     
+    // 禁止背景滚动
+    document.body.style.overflow = 'hidden';
+    
     // 创建模态框
     const modal = document.createElement('div');
     modal.id = 'operatorModal';
@@ -1602,6 +1664,8 @@ function closeModal() {
     const modal = document.getElementById('operatorModal');
     if (modal) {
         modal.remove();
+        // 恢复背景滚动
+        document.body.style.overflow = '';
     }
 }
 
@@ -1633,6 +1697,207 @@ function filterOperators(type) {
 // 在generateLoadout函数中，添加预算优化
 // 在generateLoadout函数中，添加预算验证步骤
 async function generateLoadout() {
+    // 添加预算优化函数
+function optimizeBudgetUsage(weapon, gear, budgetAllocation, totalBudget, playerType) {
+    console.log("=== 开始预算优化 ===");
+    
+    // 计算当前总成本
+    const weaponCost = weapon ? weapon.price : 0;
+    const gearCost = Object.values(gear).reduce((sum, item) => sum + (item ? item.price : 0), 0);
+    const medicalCost = budgetAllocation.medical;
+    const ammoCost = budgetAllocation.ammo;
+    const currentTotalCost = weaponCost + gearCost + medicalCost + ammoCost;
+    
+    console.log(`当前总成本: ${formatPrice(currentTotalCost)}`);
+    console.log(`可用预算: ${formatPrice(totalBudget)}`);
+    
+    const remainingBudget = totalBudget - currentTotalCost;
+    console.log(`剩余预算: ${formatPrice(remainingBudget)}`);
+    
+    // 如果超出预算或剩余预算很少（小于5%），直接返回
+    if (remainingBudget <= 0) {
+        console.log("超出预算，不进行优化");
+        return { weapon, gear, budgetAllocation };
+    }
+    if (remainingBudget < totalBudget * 0.05) {
+        console.log("剩余预算小于5%，不进行优化");
+        return { weapon, gear, budgetAllocation };
+    }
+    
+    // 根据玩家类型进行不同的优化策略
+    const result = { weapon, gear: { ...gear }, budgetAllocation: { ...budgetAllocation } };
+    
+   // 修改optimizeBudgetUsage函数中的猛攻流部分
+if (playerType === "猛攻流") {
+    console.log("猛攻流：最大化装备升级，目标预算使用率>95%");
+    
+    // 1. 武器升级（优先考虑）
+    if (weapon && remainingBudget > 50000) {
+        // 找更贵的武器，但不超过武器预算的150%
+        const maxWeaponUpgrade = Math.min(
+            remainingBudget * 0.6, // 最多用剩余预算的60%升级武器
+            budgetAllocation.weapon * 0.5 // 不超过武器预算的50%
+        );
+        
+        const betterWeapons = localWeaponsData.filter(w => 
+            w.id !== "无枪" &&
+            w.price > weapon.price && 
+            w.price <= weapon.price + maxWeaponUpgrade
+        );
+        
+        if (betterWeapons.length > 0) {
+            // 按性价比排序（价格/性能）
+            const sortedWeapons = betterWeapons.sort((a, b) => {
+                const scoreA = (a.price - weapon.price) * (getStrengthScore(a.strength) || 1);
+                const scoreB = (b.price - weapon.price) * (getStrengthScore(b.strength) || 1);
+                return scoreB - scoreA; // 性价比从高到低
+            });
+            
+            result.weapon = sortedWeapons[0];
+            console.log(`武器升级: ${weapon.name} -> ${result.weapon.name}, 增加成本: ${formatPrice(result.weapon.price - weapon.price)}`);
+        }
+    }
+    
+    // 重新计算剩余预算
+    const newWeaponCost = result.weapon ? result.weapon.price : 0;
+    const newRemainingBudget = totalBudget - (newWeaponCost + gearCost + medicalCost + ammoCost);
+    
+    // 如果升级后超出预算，回滚武器升级
+    if (newRemainingBudget < 0) {
+        result.weapon = weapon;
+        console.log("武器升级后超出预算，回滚升级");
+    }
+    const actualNewRemainingBudget = newRemainingBudget < 0 ? remainingBudget : newRemainingBudget;
+    
+    // 2. 按优先级升级防具
+    const upgradePriority = [
+        { key: 'armor', name: '护甲', budgetRatio: 0.4 },
+        { key: 'helmet', name: '头盔', budgetRatio: 0.3 },
+        { key: 'backpack', name: '背包', budgetRatio: 0.2 },
+        { key: 'chest_rig', name: '胸挂', budgetRatio: 0.1 }
+    ];
+    
+    let upgradeBudget = Math.min(actualNewRemainingBudget, totalBudget * 0.3); // 最多用30%总预算升级防具
+    
+    for (const { key, name, budgetRatio } of upgradePriority) {
+        if (upgradeBudget <= 0) break;
+        
+        const currentItem = result.gear[key];
+        if (!currentItem) continue;
+        
+        const categoryData = localGearData[`${key}s`];
+        if (!categoryData) continue;
+        
+        const itemUpgradeBudget = upgradeBudget * budgetRatio;
+        
+        // 找升级品（更贵但不超过升级预算）
+        const upgradeOptions = categoryData.filter(item => 
+            item.id !== "无" &&
+            item.price > currentItem.price && 
+            item.price <= currentItem.price + itemUpgradeBudget
+        );
+        
+        if (upgradeOptions.length > 0) {
+            // 选择升级幅度最大的（价格差最大）
+            const bestUpgrade = upgradeOptions.sort((a, b) => 
+                (b.price - currentItem.price) - (a.price - currentItem.price)
+            )[0];
+            
+            const upgradeCost = bestUpgrade.price - currentItem.price;
+            // 确保升级后不超出预算
+            if (upgradeCost <= upgradeBudget) {
+                result.gear[key] = bestUpgrade;
+                upgradeBudget -= upgradeCost;
+                console.log(`${name}升级: ${currentItem.name} -> ${bestUpgrade.name}, 增加成本: ${formatPrice(upgradeCost)}`);
+            }
+        }
+    }
+    
+    const finalWeaponCost = result.weapon ? result.weapon.price : 0;
+    const finalGearCost = Object.values(result.gear).reduce((sum, item) => sum + (item ? item.price : 0), 0);
+    const finalRemainingBudget = totalBudget - (finalWeaponCost + finalGearCost + medicalCost + ammoCost);
+    
+    if (finalRemainingBudget > 0 && finalRemainingBudget < totalBudget * 0.15) {
+        const addAmmo = Math.floor(finalRemainingBudget * 0.7);
+        const addMedical = Math.floor(finalRemainingBudget * 0.3);
+        result.budgetAllocation.ammo += addAmmo;
+        result.budgetAllocation.medical += addMedical;
+        console.log(`增加消耗品预算: 弹药+${formatPrice(addAmmo)}, 药品+${formatPrice(addMedical)}`);
+    }
+
+        
+    } else if (playerType === "堵点夺舍") {
+        // 堵点夺舍优化策略
+        console.log("堵点夺舍：优化关键装备");
+        
+        if (remainingBudget > 50000) {
+            // 优先升级武器和关键防具
+            const upgradeOrder = [
+                { key: 'weapon', priority: 0.5 },
+                { key: 'helmet', priority: 0.3 },
+                { key: 'armor', priority: 0.2 }
+            ];
+            
+            for (const { key, priority } of upgradeOrder) {
+                if (remainingBudget <= 0) break;
+                
+                if (key === 'weapon' && result.weapon) {
+                    const betterWeapons = localWeaponsData.filter(w => 
+                        w.price > result.weapon.price && 
+                        w.price <= result.weapon.price + remainingBudget * priority &&
+                        w.id !== "无枪"
+                    );
+                    
+                    if (betterWeapons.length > 0) {
+                        const bestWeapon = betterWeapons.sort((a, b) => b.price - a.price)[0];
+                        result.weapon = bestWeapon;
+                        console.log(`武器升级: ${formatPrice(bestWeapon.price - result.weapon.price)}`);
+                    }
+                }
+            }
+        }
+        
+    } else {
+        console.log("鼠鼠：增加背包和药品容量");
+        
+        if (remainingBudget > 0 && remainingBudget < totalBudget * 0.15) {
+            const currentBackpack = result.gear.backpack;
+            if (currentBackpack) {
+                const betterBackpacks = localGearData.backpacks.filter(b => 
+                    b.price > currentBackpack.price && 
+                    b.price <= currentBackpack.price + remainingBudget * 0.7 &&
+                    b.id !== "无" &&
+                    (b.slots || 0) > (currentBackpack.slots || 0)
+                );
+                
+                if (betterBackpacks.length > 0) {
+                    const bestBackpack = betterBackpacks.sort((a, b) => b.slots - a.slots)[0];
+                    result.gear.backpack = bestBackpack;
+                    console.log(`背包升级: ${currentBackpack.name} -> ${bestBackpack.name}`);
+                }
+            }
+            
+            const addMedical = Math.floor(remainingBudget * 0.8);
+            const addAmmo = Math.floor(remainingBudget * 0.2);
+            result.budgetAllocation.medical += addMedical;
+            result.budgetAllocation.ammo += addAmmo;
+            console.log(`增加消耗品预算: 药品+${formatPrice(addMedical)}, 弹药+${formatPrice(addAmmo)}`);
+        }
+    }
+    
+    // 计算最终成本
+    const finalWeaponCost = result.weapon ? result.weapon.price : 0;
+    const finalGearCost = Object.values(result.gear).reduce((sum, item) => sum + (item ? item.price : 0), 0);
+    const finalMedicalCost = result.budgetAllocation.medical;
+    const finalAmmoCost = result.budgetAllocation.ammo;
+    const finalTotalCost = finalWeaponCost + finalGearCost + finalMedicalCost + finalAmmoCost;
+    
+    console.log(`优化后总成本: ${formatPrice(finalTotalCost)}`);
+    console.log(`预算使用率: ${((finalTotalCost / totalBudget) * 100).toFixed(1)}%`);
+    console.log("=== 预算优化完成 ===\n");
+    
+    return result;
+}
     console.log(`生成配装: ${currentPlayerType}, 预算: ${currentBudget}, 地图: ${currentMap}, 模式: ${currentMode}`);
     
     // 检查预算是否满足地图要求
@@ -1653,75 +1918,134 @@ async function generateLoadout() {
         </div>
     `;
     
-    // 模拟加载时间
-    setTimeout(() => {
-        try {
-            // 1. 分配预算
-            const budgetAllocation = allocateBudget(currentPlayerType, currentBudget);
-            console.log('预算分配:', budgetAllocation);
-            
-            // 2. 选择武器（带预算预留）
-            const selectedWeapon = selectWeapon(localWeaponsData, currentPlayerType, budgetAllocation.weapon, currentMap);
-            console.log('选择的武器:', selectedWeapon, '价格:', selectedWeapon.price);
-            
-            // 3. 重新计算剩余预算用于装备
-            const weaponCost = selectedWeapon.price;
-            const remainingBudgetForGear = currentBudget - weaponCost - budgetAllocation.medical - budgetAllocation.ammo;
-            
-            // 4. 调整装备预算分配，确保不超总预算
-            const adjustedGearBudget = {
-                helmet: Math.min(budgetAllocation.helmet, remainingBudgetForGear * 0.2),
-                armor: Math.min(budgetAllocation.armor, remainingBudgetForGear * 0.5),
-                chest_rig: Math.min(budgetAllocation.chest_rig, remainingBudgetForGear * 0.1),
-                backpack: Math.min(budgetAllocation.backpack, remainingBudgetForGear * 0.2)
-            };
-            
-            // 5. 选择防具
-            const selectedGear = selectGear(localGearData, currentPlayerType, adjustedGearBudget);
-            console.log('选择的防具:', selectedGear);
-            
-            // 6. 计算当前总成本
-            const gearCost = Object.values(selectedGear).reduce((sum, item) => sum + (item ? item.price : 0), 0);
-            const currentTotalCost = weaponCost + gearCost + budgetAllocation.medical + budgetAllocation.ammo;
-            
-            // 7. 如果猛攻流且预算利用率低，进行安全升级
-            let finalGear = selectedGear;
-            if (currentPlayerType === "猛攻流" && currentTotalCost < currentBudget * 0.8) {
-                finalGear = upgradeGearForMaxBudget(
-                    selectedGear, 
-                    localGearData, 
-                    budgetAllocation, 
-                    currentBudget,
-                    weaponCost
-                );
-            }
-            
-            // 8. 选择干员
-            const selectedOperators = selectOperators(localOperatorsData, currentPlayerType);
-            
-            // 9. 最终预算验证
-            const finalGearCost = Object.values(finalGear).reduce((sum, item) => sum + (item ? item.price : 0), 0);
-            const finalTotalCost = weaponCost + finalGearCost + budgetAllocation.medical + budgetAllocation.ammo;
-            
-            console.log('最终总成本:', finalTotalCost, '预算:', currentBudget);
-            
-            if (finalTotalCost > currentBudget) {
-                console.warn('⚠️ 总成本超出预算，进行调整...');
-                // 如果有超出，按比例削减药品和弹药
-                const overBudget = finalTotalCost - currentBudget;
-                const adjustedMedicalAmmo = Math.max(0, budgetAllocation.medical + budgetAllocation.ammo - overBudget);
-                budgetAllocation.medical = Math.floor(adjustedMedicalAmmo * 0.5);
-                budgetAllocation.ammo = Math.floor(adjustedMedicalAmmo * 0.5);
-            }
-            
-            // 10. 显示结果
-            displayLoadout(selectedWeapon, finalGear, selectedOperators, budgetAllocation);
-            
-        } catch (error) {
-            console.error("生成配装时出错:", error);
-            // ... 错误处理代码
+    // 设置超时保护（5秒）
+    const timeout = setTimeout(() => {
+        loadoutResult.innerHTML = `
+            <div class="text-center py-10">
+                <div class="w-16 h-16 bg-gradient-to-r from-red-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-exclamation-triangle text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold mb-2">生成超时</h3>
+                <p class="text-gray-400 mb-4">配装生成时间过长，请尝试调整预算或重新生成</p>
+                <button onclick="generateLoadout()" class="px-6 py-3 bg-blue-600 rounded-lg hover:bg-blue-700 transition-all">
+                    重新生成
+                </button>
+            </div>
+        `;
+    }, 5000);
+    try {
+        // 1. 分配预算
+        const budgetAllocation = allocateBudget(currentPlayerType, currentBudget);
+        console.log('预算分配:', budgetAllocation);
+        
+        // 2. 选择武器
+        const selectedWeapon = selectWeapon(localWeaponsData, currentPlayerType, budgetAllocation.weapon, currentMap);
+        
+        if (!selectedWeapon) {
+            clearTimeout(timeout);
+            throw new Error("武器选择失败，请检查武器数据");
         }
-    }, 800);
+        
+        console.log('选择的武器:', selectedWeapon.name, '价格:', formatPrice(selectedWeapon.price));
+        
+        // 3. 选择防具（简化版）
+        const selectedGear = selectGear(localGearData, currentPlayerType, {
+            helmet: budgetAllocation.helmet,
+            armor: budgetAllocation.armor,
+            chest_rig: budgetAllocation.chest_rig,
+            backpack: budgetAllocation.backpack
+        });
+        
+        console.log('选择的防具:', selectedGear);
+        
+            // 4. 优化预算使用
+    const optimized = optimizeBudgetUsage(
+        selectedWeapon, 
+        selectedGear, 
+        budgetAllocation, 
+        currentBudget, 
+        currentPlayerType
+    );
+    
+    // 5. 选择干员
+    const selectedOperators = selectOperators(localOperatorsData, currentPlayerType);
+    
+    // 6. 清除超时
+    clearTimeout(timeout);
+    
+    // 7. 监控和调整预算，确保总成本不超过总预算
+    const weaponCost = optimized.weapon ? optimized.weapon.price : 0;
+    const adjusted = monitorAndAdjustBudget(weaponCost, optimized.gear, optimized.budgetAllocation, currentBudget);
+    
+    const adjustedGearCost = Object.values(adjusted.gear).reduce((sum, item) => sum + (item ? item.price : 0), 0);
+    const actualConsumables = estimateConsumablesCost(currentPlayerType, adjusted.budgetAllocation);
+    const totalCost = weaponCost + adjustedGearCost + actualConsumables.medicalCost + actualConsumables.ammoCost;
+    
+    console.log('总成本计算:', {
+        武器: formatPrice(weaponCost),
+        防具: formatPrice(adjustedGearCost),
+        药品: formatPrice(actualConsumables.medicalCost),
+        弹药: formatPrice(actualConsumables.ammoCost),
+        总计: formatPrice(totalCost)
+    });
+    
+    displayLoadout(optimized.weapon, adjusted.gear, selectedOperators, adjusted.budgetAllocation, totalCost);
+        
+} catch (error) {
+    clearTimeout(timeout);
+    console.error("生成配装时出错:", error);
+    
+    // 尝试简化版生成逻辑
+    try {
+        console.log("尝试简化生成逻辑...");
+        
+        // 简化版：只选择最合适的武器和基础装备
+        const weaponBudget = currentBudget * 0.5;
+        const simpleWeapon = selectSimpleWeapon(currentPlayerType, weaponBudget);
+        const simpleGear = selectSimpleGear(currentPlayerType, currentBudget);
+        const simpleOperators = selectOperators(localOperatorsData, currentPlayerType);
+        
+        const weaponCost = simpleWeapon ? simpleWeapon.price : 0;
+        const gearCost = Object.values(simpleGear).reduce((sum, item) => sum + (item ? item.price : 0), 0);
+        const simpleTotalCost = weaponCost + gearCost + 50000; // 假设5万消耗品
+        
+        displayLoadout(simpleWeapon, simpleGear, simpleOperators, {medical: 30000, ammo: 20000}, simpleTotalCost);
+        
+    } catch (fallbackError) {
+        console.error("备选方案也失败:", fallbackError);
+        
+        loadoutResult.innerHTML = `
+            <div class="text-center py-10">
+                <div class="w-16 h-16 bg-gradient-to-r from-red-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-exclamation-triangle text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold mb-2">生成失败</h3>
+                <p class="text-gray-400 mb-4">${error.message || "未知错误"}</p>
+                <div class="flex justify-center gap-4">
+                    <button onclick="generateLoadout()" class="px-6 py-3 bg-blue-600 rounded-lg hover:bg-blue-700 transition-all">
+                        重新生成
+                    </button>
+                    <button onclick="currentBudget = Math.min(currentBudget * 1.2, 5000000); document.getElementById('budgetSlider').value = currentBudget; document.getElementById('budgetValue').textContent = formatPrice(currentBudget); generateLoadout()" class="px-6 py-3 bg-green-600 rounded-lg hover:bg-green-700 transition-all">
+                        增加预算再试
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+}
+}
+// 在script.js中添加辅助函数
+function getStrengthScore(strength) {
+    if (!strength) return 0;
+    
+    if (strength.includes("S")) return 5;
+    if (strength.includes("A+")) return 4.5;
+    if (strength.includes("A")) return 4;
+    if (strength.includes("B")) return 3;
+    if (strength.includes("C")) return 2;
+    if (strength.includes("D")) return 1;
+    
+    return 0;
 }
 // 添加一个预算监控和调整函数
 function monitorAndAdjustBudget(weaponCost, gear, budgetAllocation, totalBudget) {
@@ -1738,10 +2062,14 @@ function monitorAndAdjustBudget(weaponCost, gear, budgetAllocation, totalBudget)
     
     // 优先削减药品和弹药
     let remainingOverBudget = overBudget;
-    const medicalAmmoReduction = Math.min(budgetAllocation.medical + budgetAllocation.ammo, remainingOverBudget);
-    budgetAllocation.medical = Math.max(10000, budgetAllocation.medical - medicalAmmoReduction * 0.5);
-    budgetAllocation.ammo = Math.max(10000, budgetAllocation.ammo - medicalAmmoReduction * 0.5);
-    remainingOverBudget -= medicalAmmoReduction;
+    const maxReduction = budgetAllocation.medical + budgetAllocation.ammo - 20000; // 保留最低20000
+    const medicalAmmoReduction = Math.min(Math.max(0, maxReduction), remainingOverBudget);
+    
+    if (medicalAmmoReduction > 0) {
+        budgetAllocation.medical = Math.max(10000, budgetAllocation.medical - medicalAmmoReduction * 0.5);
+        budgetAllocation.ammo = Math.max(10000, budgetAllocation.ammo - medicalAmmoReduction * 0.5);
+        remainingOverBudget -= medicalAmmoReduction;
+    }
     
     // 如果还不够，尝试降低装备等级
     if (remainingOverBudget > 0) {
@@ -1769,9 +2097,19 @@ function monitorAndAdjustBudget(weaponCost, gear, budgetAllocation, totalBudget)
         }
     }
     
+    // 最终验证：如果仍然超支，再次削减消耗品
+    const finalCost = weaponCost + Object.values(gear).reduce((sum, item) => sum + (item ? item.price : 0), 0) + budgetAllocation.medical + budgetAllocation.ammo;
+    if (finalCost > totalBudget) {
+        const finalOverBudget = finalCost - totalBudget;
+        budgetAllocation.medical = Math.max(10000, budgetAllocation.medical - finalOverBudget * 0.5);
+        budgetAllocation.ammo = Math.max(10000, budgetAllocation.ammo - finalOverBudget * 0.5);
+        console.log(`最终调整: 再削减${formatPrice(finalOverBudget)}`);
+    }
+    
     return { gear, budgetAllocation };
 }
 // 新增：为猛攻流升级装备以最大化预算使用
+// 简化猛攻流装备升级逻辑
 function upgradeGearForMaxBudget(currentGear, gearData, budgetAllocation, totalBudget, weaponCost) {
     const result = { ...currentGear };
     
@@ -1779,30 +2117,31 @@ function upgradeGearForMaxBudget(currentGear, gearData, budgetAllocation, totalB
     const currentGearCost = Object.values(result).reduce((sum, item) => sum + (item ? item.price : 0), 0);
     const currentTotalCost = weaponCost + currentGearCost;
     const medicalAmmoCost = budgetAllocation.medical + budgetAllocation.ammo;
-    const maxAllowableCost = totalBudget - medicalAmmoCost; // 最大允许的武器+装备成本
+    const maxAllowableCost = Math.max(0, totalBudget - medicalAmmoCost); // 确保不为负数
     
-    // 如果当前总成本已经接近或超过最大允许成本，不升级
-    if (currentTotalCost >= maxAllowableCost * 0.95) {
-        console.log(`当前成本${currentTotalCost}已达上限${maxAllowableCost}，不进行升级`);
+    // 如果当前总成本已经超过最大允许成本的90%，不升级
+    if (currentTotalCost >= maxAllowableCost * 0.9 || maxAllowableCost <= 0) {
         return result;
     }
     
-    const remainingBudget = maxAllowableCost - currentTotalCost;
+    const remainingBudget = Math.max(0, maxAllowableCost - currentTotalCost); // 确保不为负数
     
     // 如果剩余预算很少，不升级
-    if (remainingBudget < 50000) {
+    if (remainingBudget < 100000) {
         return result;
     }
     
-    // 按优先级升级装备（护甲 > 头盔 > 背包 > 胸挂）
-    const upgradeOrder = [
+    console.log(`猛攻流装备升级：剩余预算${formatPrice(remainingBudget)}`);
+    
+    // 简单的升级策略：每个装备类别增加20%的预算
+    const categories = [
         { key: 'armor', ratio: 0.4, name: '护甲' },
         { key: 'helmet', ratio: 0.3, name: '头盔' },
         { key: 'backpack', ratio: 0.2, name: '背包' },
         { key: 'chest_rig', ratio: 0.1, name: '胸挂' }
     ];
     
-    upgradeOrder.forEach(({ key, ratio, name }) => {
+    categories.forEach(({ key, ratio, name }) => {
         if (!result[key] || !gearData[`${key}s`]) return;
         
         const currentItem = result[key];
@@ -1812,39 +2151,19 @@ function upgradeGearForMaxBudget(currentGear, gearData, budgetAllocation, totalB
         // 找出更好的装备（不超过当前成本+升级预算，且比当前好）
         const betterItems = categoryData.filter(item => 
             item.price > currentItem.price && 
-            item.price <= currentItem.price + upgradeBudget
+            item.price <= currentItem.price + upgradeBudget &&
+            item.price > 0 // 确保价格有效
         );
         
         if (betterItems.length > 0) {
-            // 根据升级类型选择策略
-            let selectedItem;
-            if (key === 'armor' || key === 'helmet') {
-                // 防具：优先高级别，再考虑价格
-                selectedItem = betterItems.sort((a, b) => {
-                    const levelA = parseInt(a.level) || 0;
-                    const levelB = parseInt(b.level) || 0;
-                    if (levelB !== levelA) return levelB - levelA;
-                    return (b.price || 0) - (a.price || 0);
-                })[0];
-            } else {
-                // 其他：选性价比最高的（容量/价格）
-                selectedItem = betterItems.sort((a, b) => {
-                    const valueA = (a.slots || 1) / a.price;
-                    const valueB = (b.slots || 1) / b.price;
-                    return valueB - valueA;
-                })[0];
-            }
+            // 选择最贵的一个
+            const selectedItem = betterItems.sort((a, b) => b.price - a.price)[0];
             
-            // 检查升级后是否超出总预算
-            const newGearCost = Object.values(result).reduce((sum, item) => {
-                const cost = item === currentItem ? selectedItem.price : (item ? item.price : 0);
-                return sum + cost;
-            }, 0);
-            
-            const newTotalCost = weaponCost + newGearCost;
+            // 检查升级后总成本
+            const newTotalCost = currentTotalCost - currentItem.price + selectedItem.price;
             
             if (newTotalCost <= maxAllowableCost) {
-                console.log(`升级${name}: ${currentItem.name} -> ${selectedItem.name}`);
+                console.log(`升级${name}: ${currentItem.name} (${formatPrice(currentItem.price)}) -> ${selectedItem.name} (${formatPrice(selectedItem.price)})`);
                 result[key] = selectedItem;
             }
         }
@@ -1853,40 +2172,35 @@ function upgradeGearForMaxBudget(currentGear, gearData, budgetAllocation, totalB
     return result;
 }
 
-
 // 分配预算
 function allocateBudget(playerType, totalBudget) {
-    // 预算分配比例 - 猛攻流要更激进
     const allocations = {
         "鼠鼠": {
-            weapon: 0.10,    // 10% - 最便宜的武器
-            helmet: 0.02,    // 2% - 最便宜的头盔
-            armor: 0.05,     // 5% - 最便宜的护甲
-            chest_rig: 0.10, // 10% - 容量最大的胸挂
-            backpack: 0.30,  // 30% - 容量最大的背包
-            medical: 0.08,   // 8% - 基础药品
-            ammo: 0.05,      // 5% - 基础弹药
-            reserve: 0.30    // 30% - 备用
+            weapon: 0.15,    
+            helmet: 0.05,    
+            armor: 0.10,     
+            chest_rig: 0.15, 
+            backpack: 0.35,  
+            medical: 0.12,   
+            ammo: 0.08       
         },
         "堵点夺舍": {
-            weapon: 0.35,    // 35% - 性价比武器
-            helmet: 0.15,    // 15% - 4级听力头
-            armor: 0.20,     // 20% - 4级甲
-            chest_rig: 0.03, // 3% - 基础胸挂
-            backpack: 0.05,  // 5% - 基础背包
-            medical: 0.07,   // 7% - 中级药品
-            ammo: 0.10,      // 10% - 中级弹药
-            reserve: 0.05    // 5% - 备用
+            weapon: 0.38,    
+            helmet: 0.16,    
+            armor: 0.21,     
+            chest_rig: 0.04, 
+            backpack: 0.06,  
+            medical: 0.08,   
+            ammo: 0.07       
         },
         "猛攻流": {
-            weapon: 0.50,    // 50% - 最贵的S级武器
-            helmet: 0.20,    // 20% - 最高级头盔
-            armor: 0.25,     // 25% - 最高级护甲
-            chest_rig: 0.02, // 2% - 基础胸挂（不重要）
-            backpack: 0.01,  // 1% - 基础背包（不重要）
-            medical: 0.01,   // 1% - 少量高级药品
-            ammo: 0.01,      // 1% - 少量高级弹药
-            reserve: 0.00    // 0% - 不留备用，全花光！
+            weapon: 0.50,    
+            helmet: 0.20,    
+            armor: 0.25,     
+            chest_rig: 0.02, 
+            backpack: 0.01,  
+            medical: 0.01,   
+            ammo: 0.01       
         }
     };
     
@@ -1925,81 +2239,374 @@ function estimateConsumablesCost(playerType, budgetAllocation) {
     return { ammoCost, medicalCost };
 }
 
-// 然后在displayLoadout中使用
-const consumableEstimate = estimateConsumablesCost(currentPlayerType, budgetAllocation);
-const consumableCost = consumableEstimate.ammoCost + consumableEstimate.medicalCost;
-// 选择武器
-// 修改selectWeapon函数，添加对后续装备的预算预留
 function selectWeapon(weapons, playerType, weaponBudget, mapId) {
     if (!weapons || weapons.length === 0) {
         throw new Error("没有可用的武器数据");
     }
     
-    // 根据玩家类型预留后续装备的最低预算
-    let minGearBudget = 0;
-    switch(playerType) {
-        case "鼠鼠":
-            minGearBudget = 50000; // 头盔+护甲+背包最低预算
-            break;
-        case "堵点夺舍":
-            minGearBudget = 150000;
-            break;
-        case "猛攻流":
-            minGearBudget = 300000; // 高级装备需要更多预算
-            break;
+    console.log(`=== 武器选择开始 ===`);
+    console.log(`玩家类型: ${playerType}, 武器预算: ${weaponBudget}, 地图: ${mapId}`);
+    
+    // 根据玩家类型调整预留预算策略
+    let availableWeaponBudget = weaponBudget;
+    
+    if (playerType === "堵点夺舍") {
+        // 堵点夺舍：预留35%的武器预算用于装备
+        const gearReserveRatio = 0.35;
+        const minWeaponBudget = 80000; // 确保至少有8万买武器
+        availableWeaponBudget = Math.max(
+            minWeaponBudget,
+            weaponBudget * (1 - gearReserveRatio)
+        );
+    } else if (playerType === "鼠鼠") {
+        // 鼠鼠：预留较多预算给背包和装备
+        const gearReserveRatio = 0.7;
+        const minWeaponBudget = 30000; // 至少3万买武器
+        availableWeaponBudget = Math.max(
+            minWeaponBudget,
+            weaponBudget * (1 - gearReserveRatio)
+        );
+    } else if (playerType === "猛攻流") {
+        // 猛攻流：大部分预算给武器
+        const gearReserveRatio = 0.25;
+        const minWeaponBudget = 250000; // 至少25万买武器
+        availableWeaponBudget = Math.max(
+            minWeaponBudget,
+            weaponBudget * (1 - gearReserveRatio)
+        );
     }
     
-    // 实际可用武器预算 = 武器预算 - 预留装备预算
-    const availableWeaponBudget = Math.max(10000, weaponBudget - minGearBudget);
+    console.log(`可用武器预算: ${formatPrice(availableWeaponBudget)}`);
     
-    // 筛选在可用预算内的武器
-    let suitableWeapons = weapons.filter(weapon => weapon.price <= availableWeaponBudget);
+    // 1. 首先筛选符合预算的武器（排除"无枪"选项）
+    let budgetWeapons = weapons.filter(weapon => 
+        weapon.price <= availableWeaponBudget && 
+        weapon.id !== "无枪" &&
+        weapon.price > 0 // 排除价格为0的
+    );
     
-    if (suitableWeapons.length === 0) {
-        // 如果预算不够，选择最便宜的武器
-        suitableWeapons = [...weapons].sort((a, b) => a.price - b.price).slice(0, 3);
+    console.log(`预算内武器数量: ${budgetWeapons.length}`);
+    
+    // 如果预算内武器太少，放宽预算条件（允许稍微超预算）
+    if (budgetWeapons.length < 3) {
+        console.log(`预算内武器太少(${budgetWeapons.length})，放宽预算到${formatPrice(availableWeaponBudget * 1.2)}`);
+        budgetWeapons = weapons.filter(weapon => 
+            weapon.price <= availableWeaponBudget * 1.2 && 
+            weapon.id !== "无枪" &&
+            weapon.price > 0
+        );
     }
     
-    // 按照玩家类型的不同策略选择
-    if (playerType === "猛攻流") {
-        // 猛攻流：在预算内选择强度最高的
-        suitableWeapons.sort((a, b) => {
-            const strengthOrder = { "S": 5, "A+-S": 4.5, "A+": 4, "A": 3, "B": 2, "C": 1 };
-            const strengthA = strengthOrder[a.strength] || 0;
-            const strengthB = strengthOrder[b.strength] || 0;
-            
-            if (strengthB !== strengthA) return strengthB - strengthA;
-            // 强度相同，选更接近预算的
-            const diffA = Math.abs(a.price - availableWeaponBudget);
-            const diffB = Math.abs(b.price - availableWeaponBudget);
-            return diffA - diffB;
-        });
-    } 
-    else if (playerType === "堵点夺舍") {
-        // 堵点夺舍：选择性价比高的爆发武器
-        suitableWeapons.forEach(weapon => {
-            weapon.score = 0;
-            const strengthOrder = { "S": 10, "A+-S": 8, "A+": 6, "A": 4, "B": 2, "C": 1 };
-            weapon.score += strengthOrder[weapon.strength] || 0;
-            
-            // 性价比评分 = 强度 / 价格 * 10000
-            weapon.score += Math.round((strengthOrder[weapon.strength] || 1) / weapon.price * 10000);
-            
-            // 标签加分
-            if (weapon.tags) {
-                if (weapon.tags.some(tag => tag.includes("高爆发"))) weapon.score += 5;
-                if (weapon.tags.some(tag => tag.includes("近距离"))) weapon.score += 3;
-            }
-        });
+    // 如果还是没有武器，选择最便宜的5把（排除无枪）
+    if (budgetWeapons.length === 0) {
+        console.log("没有预算内武器，选择最便宜的5把");
+        budgetWeapons = [...weapons]
+            .filter(w => w.id !== "无枪" && w.price > 0)
+            .sort((a, b) => a.price - b.price)
+            .slice(0, 5);
+    }
+    
+    // 如果还是没有武器，包含"无枪"选项
+    if (budgetWeapons.length === 0) {
+        console.log("没有找到任何武器，使用无枪选项");
+        const noGun = weapons.find(w => w.id === "无枪");
+        if (noGun) {
+            budgetWeapons.push(noGun);
+        } else {
+            // 如果连无枪都没有，创建一个默认的无枪选项
+            budgetWeapons.push({
+                id: "无枪",
+                name: "无枪",
+                type: "无",
+                price: 0,
+                strength: "C",
+                pros: "零成本",
+                cons: "无自卫能力"
+            });
+        }
+    }
+    
+    console.log(`最终候选武器数量: ${budgetWeapons.length}`);
+    
+    // 2. 根据玩家类型应用不同选择策略
+    let selectedWeapon;
+    
+   // 在selectWeapon函数的猛攻流分支中添加更智能的选择逻辑
+// 修改selectWeapon函数的猛攻流部分
+if (playerType === "猛攻流") {
+    console.log(`猛攻流武器选择：预算${formatPrice(availableWeaponBudget)}`);
+    
+    // 策略1：优先选择S级满改武器
+    let sTierWeapons = budgetWeapons.filter(w => 
+        w.strength && w.strength.includes("S") &&
+        w.mod_level && w.mod_level.includes("满改")
+    );
+    
+    console.log(`S级满改武器数量: ${sTierWeapons.length}`);
+    
+    // 策略2：如果没有S级满改，选择任何S级武器
+    if (sTierWeapons.length === 0) {
+        sTierWeapons = budgetWeapons.filter(w => 
+            w.strength && w.strength.includes("S")
+        );
+        console.log(`S级武器数量: ${sTierWeapons.length}`);
+    }
+    
+    // 策略3：如果还没有S级，选择A+级
+    if (sTierWeapons.length === 0) {
+        sTierWeapons = budgetWeapons.filter(w => 
+            w.strength && w.strength.includes("A+")
+        );
+        console.log(`A+级武器数量: ${sTierWeapons.length}`);
+    }
+    
+    // 策略4：如果还是没有，选择预算内最贵的3把
+    if (sTierWeapons.length === 0) {
+        console.log("猛攻流：无S/A+级武器，选择最贵的武器");
+        sTierWeapons = [...budgetWeapons]
+            .sort((a, b) => b.price - a.price)
+            .slice(0, 3);
+    }
+    
+    // 确保有武器可选
+    if (sTierWeapons.length > 0) {
+        // 按价格从高到低排序，选择最贵的
+        sTierWeapons.sort((a, b) => b.price - a.price);
         
-        suitableWeapons.sort((a, b) => b.score - a.score);
+        // 如果预算充足，选择最贵的；如果预算紧张，选择性价比最高的（价格/性能比）
+        if (availableWeaponBudget > 500000) {
+            // 高预算：选择最贵的
+            selectedWeapon = sTierWeapons[0];
+        } else {
+            // 中等预算：选择中间价位的
+            const middleIndex = Math.floor(sTierWeapons.length / 2);
+            selectedWeapon = sTierWeapons[middleIndex];
+        }
+        
+        console.log(`猛攻流选择：${selectedWeapon.name} (${selectedWeapon.strength}, ${formatPrice(selectedWeapon.price)})`);
+    } else {
+        // 兜底方案：选择最贵的武器
+        const fallbackWeapons = [...budgetWeapons].sort((a, b) => b.price - a.price);
+        selectedWeapon = fallbackWeapons[0] || budgetWeapons[0];
+        console.log(`猛攻流兜底选择：${selectedWeapon?.name || '未知'}`);
+    }
+    
+    // 如果选择的是"无枪"，尝试找另一个
+    if (selectedWeapon && selectedWeapon.id === "无枪") {
+        const otherWeapons = budgetWeapons.filter(w => w.id !== "无枪");
+        if (otherWeapons.length > 0) {
+            selectedWeapon = otherWeapons.sort((a, b) => b.price - a.price)[0];
+        }
+    }
+    
+    // 确保选择了武器
+    if (!selectedWeapon && budgetWeapons.length > 0) {
+        selectedWeapon = budgetWeapons.sort((a, b) => b.price - a.price)[0];
+    }
+}
+    else if (playerType === "堵点夺舍") {
+        // 堵点夺舍：多维度选择，增加随机性
+        
+        // 策略1：高爆发武器（标签含"高爆发"、"高伤害"、"秒杀"）
+        const highDamageWeapons = budgetWeapons.filter(w => 
+            w.tags && w.tags.some(tag => 
+                tag.includes("高爆发") || tag.includes("高伤害") || tag.includes("秒杀")
+            )
+        );
+        
+        // 策略2：适合蹲点的武器类型
+        const ambushWeaponTypes = ["精确射手步枪", "狙击步枪", "战斗步枪"];
+        const ambushWeapons = budgetWeapons.filter(w => 
+            ambushWeaponTypes.includes(w.type)
+        );
+        
+        // 策略3：中近距离武器
+        const closeRangeWeapons = budgetWeapons.filter(w => 
+            w.tags && w.tags.some(tag => 
+                tag.includes("中近距离") || tag.includes("近距离")
+            )
+        );
+        
+        // 策略4：性价比武器
+        const budgetRatio = 0.7; // 使用70%的预算
+        const valueWeapons = budgetWeapons.filter(w => 
+            w.price <= availableWeaponBudget * budgetRatio
+        );
+        
+        // 创建权重池：不同的策略有不同的权重
+        const weaponPools = [];
+        
+        // 高爆发武器：权重最高（35%）
+        if (highDamageWeapons.length > 0) {
+            weaponPools.push({ weapons: highDamageWeapons, weight: 0.35 });
+        }
+        
+        // 蹲点武器：权重高（30%）
+        if (ambushWeapons.length > 0) {
+            weaponPools.push({ weapons: ambushWeapons, weight: 0.30 });
+        }
+        
+        // 中近距离武器：权重中等（20%）
+        if (closeRangeWeapons.length > 0) {
+            weaponPools.push({ weapons: closeRangeWeapons, weight: 0.20 });
+        }
+        
+        // 性价比武器：权重低（15%）
+        if (valueWeapons.length > 0) {
+            weaponPools.push({ weapons: valueWeapons, weight: 0.15 });
+        }
+        
+        // 如果没有特定策略的武器，使用所有预算内武器
+        if (weaponPools.length === 0) {
+            selectedWeapon = getRandomWeapon(budgetWeapons);
+        } else {
+            // 根据权重随机选择一个策略池
+            const selectedPool = selectByWeight(weaponPools);
+            selectedWeapon = getRandomWeapon(selectedPool.weapons);
+        }
+        
+        console.log(`堵点夺舍选择: ${selectedWeapon.name}, 价格: ${formatPrice(selectedWeapon.price)}`);
     }
     else {
-        // 鼠鼠：选最便宜的
-        suitableWeapons.sort((a, b) => a.price - b.price);
+        // 鼠鼠：多种便宜武器策略
+        
+        // 策略1：超便宜武器（10万以下）
+        const superCheap = budgetWeapons.filter(w => w.price <= 100000);
+        
+        // 策略2：高性价比武器（标签含"性价比"）
+        const valueWeapons = budgetWeapons.filter(w => 
+            w.tags && w.tags.some(tag => tag.includes("性价比"))
+        );
+        
+        // 策略3：轻便武器（冲锋枪、手枪）
+        const lightWeapons = budgetWeapons.filter(w => 
+            w.type === "冲锋枪"
+        );
+        
+        // 创建权重池
+        const weaponPools = [];
+        
+        if (superCheap.length > 0) {
+            weaponPools.push({ weapons: superCheap, weight: 0.40 });
+        }
+        
+        if (valueWeapons.length > 0) {
+            weaponPools.push({ weapons: valueWeapons, weight: 0.35 });
+        }
+        
+        if (lightWeapons.length > 0) {
+            weaponPools.push({ weapons: lightWeapons, weight: 0.25 });
+        }
+        
+        if (weaponPools.length === 0) {
+            // 选择最便宜的5把中的随机一把
+            const cheapestWeapons = [...budgetWeapons]
+                .sort((a, b) => a.price - b.price)
+                .slice(0, 5);
+            selectedWeapon = getRandomWeapon(cheapestWeapons);
+        } else {
+            const selectedPool = selectByWeight(weaponPools);
+            selectedWeapon = getRandomWeapon(selectedPool.weapons);
+        }
+        
+        console.log(`鼠鼠选择: ${selectedWeapon.name}, 价格: ${formatPrice(selectedWeapon.price)}`);
     }
     
-    return suitableWeapons[0] || weapons[0];
+    // 3. 根据地图微调（可选）
+    selectedWeapon = adjustWeaponByMap(selectedWeapon, mapId, budgetWeapons);
+    
+    // 最终保障：确保返回有效的武器对象
+    if (!selectedWeapon) {
+        console.log("严重错误：未选择到武器，使用无枪作为最终保障");
+        const noGun = localWeaponsData.find(w => w.id === "无枪");
+        if (noGun) {
+            selectedWeapon = noGun;
+        } else {
+            // 创建默认无枪选项
+            selectedWeapon = {
+                id: "无枪",
+                name: "无枪",
+                type: "无",
+                price: 0,
+                strength: "C",
+                pros: "零成本",
+                cons: "无自卫能力"
+            };
+        }
+    }
+    
+    console.log(`最终选择: ${selectedWeapon.name}, 价格: ${formatPrice(selectedWeapon.price)}, 类型: ${selectedWeapon.type}`);
+    console.log(`=== 武器选择结束 ===\n`);
+    
+    return selectedWeapon;
+}
+
+// 新增：根据地图调整武器选择
+function adjustWeaponByMap(selectedWeapon, mapId, availableWeapons) {
+    // 如果不匹配地图特点，有一定概率更换
+    const shouldAdjust = Math.random() < 0.3; // 30%概率调整
+    
+    if (!shouldAdjust) return selectedWeapon;
+    
+    let alternativeWeapons = [];
+    
+    switch(mapId) {
+        case "tidal_prison": // 潮汐监狱：近距离作战
+            alternativeWeapons = availableWeapons.filter(w => 
+                w.type === "冲锋枪" || 
+                w.tags?.some(tag => tag.includes("近距离"))
+            );
+            break;
+            
+        case "aerospace_base": // 航天基地：中远距离
+        case "longbow_valley": // 长弓溪谷：远距离
+            alternativeWeapons = availableWeapons.filter(w => 
+                w.type === "精确射手步枪" || 
+                w.type === "狙击步枪" ||
+                w.tags?.some(tag => tag.includes("全距离"))
+            );
+            break;
+            
+        case "zero_dam": // 零号大坝：混合距离
+        case "bukshi": // 巴克什：巷战
+            // 保持原武器，不调整
+            return selectedWeapon;
+    }
+    
+    if (alternativeWeapons.length > 0) {
+        const newWeapon = getRandomWeapon(alternativeWeapons);
+        console.log(`根据地图${mapId}调整武器: ${selectedWeapon.name} -> ${newWeapon.name}`);
+        return newWeapon;
+    }
+    
+    return selectedWeapon;
+}
+
+// 新增：从武器数组中随机选择一把
+function getRandomWeapon(weapons) {
+    if (!weapons || weapons.length === 0) return null;
+    const randomIndex = Math.floor(Math.random() * weapons.length);
+    return weapons[randomIndex];
+}
+
+// 新增：根据权重选择策略池
+function selectByWeight(pools) {
+    // 计算总权重
+    const totalWeight = pools.reduce((sum, pool) => sum + pool.weight, 0);
+    
+    // 生成随机数
+    let random = Math.random() * totalWeight;
+    
+    // 根据权重选择
+    for (const pool of pools) {
+        random -= pool.weight;
+        if (random <= 0) {
+            return pool;
+        }
+    }
+    
+    // 如果出错，返回第一个
+    return pools[0];
 }
 // 计算武器评分
 function calculateWeaponScore(weapon, playerType, mapId) {
@@ -2054,168 +2661,196 @@ function calculateWeaponScore(weapon, playerType, mapId) {
 }
 
 // 选择防具
+// 修改selectGear函数，增加装备选择多样性
 function selectGear(gear, playerType, budgetAllocation) {
     const result = {};
     
-    // 猛攻流专用选择器 - 选最贵最好的
+    // 猛攻流专用选择器 - 多种高级装备随机选择
     if (playerType === "猛攻流") {
-        // 头盔：选最高级的
+        // 头盔：随机选择高级头盔
         if (gear.helmets && gear.helmets.length > 0) {
-            // 按等级降序，价格降序
-            let helmets = [...gear.helmets].sort((a, b) => {
-                const levelA = parseInt(a.level) || 0;
-                const levelB = parseInt(b.level) || 0;
-                if (levelB !== levelA) return levelB - levelA;
-                return (b.price || 0) - (a.price || 0);
-            });
+            const expensiveHelmets = gear.helmets.filter(h => 
+                h.price >= budgetAllocation.helmet * 0.7 && 
+                h.price <= budgetAllocation.helmet
+            );
             
-            // 选第一个不超过预算的，如果没有就选最贵的
-            let selectedHelmet = helmets.find(h => h.price <= budgetAllocation.helmet);
-            if (!selectedHelmet && helmets.length > 0) {
-                // 如果预算不够买最贵的，也要选能买到的最好的
-                selectedHelmet = helmets.reduce((best, current) => {
-                    if (current.price <= budgetAllocation.helmet && current.price > (best?.price || 0)) {
-                        return current;
-                    }
-                    return best;
-                }, null) || helmets[0];
+            if (expensiveHelmets.length > 0) {
+                result.helmet = getRandomItem(expensiveHelmets);
+            } else {
+                // 选择最贵的3个中的随机一个
+                const topHelmets = [...gear.helmets]
+                    .sort((a, b) => (b.price || 0) - (a.price || 0))
+                    .slice(0, 3);
+                result.helmet = getRandomItem(topHelmets);
             }
-            result.helmet = selectedHelmet;
         }
         
-        // 护甲：选最高级的
+        // 护甲：随机选择高级护甲
         if (gear.armors && gear.armors.length > 0) {
-            let armors = [...gear.armors].sort((a, b) => {
-                const levelA = parseInt(a.level) || 0;
-                const levelB = parseInt(b.level) || 0;
-                if (levelB !== levelA) return levelB - levelA;
-                return (b.price || 0) - (a.price || 0);
-            });
+            const expensiveArmors = gear.armors.filter(a => 
+                a.price >= budgetAllocation.armor * 0.7 && 
+                a.price <= budgetAllocation.armor &&
+                parseInt(a.level || 0) >= 4
+            );
             
-            let selectedArmor = armors.find(a => a.price <= budgetAllocation.armor);
-            if (!selectedArmor && armors.length > 0) {
-                selectedArmor = armors.reduce((best, current) => {
-                    if (current.price <= budgetAllocation.armor && current.price > (best?.price || 0)) {
-                        return current;
-                    }
-                    return best;
-                }, null) || armors[0];
+            if (expensiveArmors.length > 0) {
+                result.armor = getRandomItem(expensiveArmors);
+            } else {
+                // 选择等级最高的3个中的随机一个
+                const topArmors = [...gear.armors]
+                    .sort((a, b) => {
+                        const levelA = parseInt(a.level || 0);
+                        const levelB = parseInt(b.level || 0);
+                        if (levelB !== levelA) return levelB - levelA;
+                        return (b.price || 0) - (a.price || 0);
+                    })
+                    .slice(0, 3);
+                result.armor = getRandomItem(topArmors);
             }
-            result.armor = selectedArmor;
         }
         
-        // 胸挂：选最贵最好的
+        // 胸挂：随机选择
         if (gear.chest_rigs && gear.chest_rigs.length > 0) {
-            let chestRigs = [...gear.chest_rigs].sort((a, b) => (b.price || 0) - (a.price || 0));
-            
-            let selectedChestRig = chestRigs.find(c => c.price <= budgetAllocation.chest_rig);
-            if (!selectedChestRig && chestRigs.length > 0) {
-                selectedChestRig = chestRigs.reduce((best, current) => {
-                    if (current.price <= budgetAllocation.chest_rig && current.price > (best?.price || 0)) {
-                        return current;
-                    }
-                    return best;
-                }, null) || chestRigs[0];
-            }
-            result.chest_rig = selectedChestRig;
+            const availableRigs = gear.chest_rigs.filter(c => 
+                c.price <= budgetAllocation.chest_rig && c.id !== "无"
+            );
+            result.chest_rig = getRandomItem(availableRigs);
         }
         
-        // 背包：选最贵最好的
+        // 背包：随机选择
         if (gear.backpacks && gear.backpacks.length > 0) {
-            let backpacks = [...gear.backpacks].sort((a, b) => (b.price || 0) - (a.price || 0));
-            
-            let selectedBackpack = backpacks.find(b => b.price <= budgetAllocation.backpack);
-            if (!selectedBackpack && backpacks.length > 0) {
-                selectedBackpack = backpacks.reduce((best, current) => {
-                    if (current.price <= budgetAllocation.backpack && current.price > (best?.price || 0)) {
-                        return current;
-                    }
-                    return best;
-                }, null) || backpacks[0];
-            }
-            result.backpack = selectedBackpack;
+            const availableBackpacks = gear.backpacks.filter(b => 
+                b.price <= budgetAllocation.backpack && b.id !== "无"
+            );
+            result.backpack = getRandomItem(availableBackpacks);
         }
     }
-    // 堵点夺舍玩家 - 选性价比最高的
+    // 堵点夺舍玩家 - 多种性价比选择
     else if (playerType === "堵点夺舍") {
-        // 头盔：选4级头为主
+        // 头盔：随机选择4级头或听力头
         if (gear.helmets && gear.helmets.length > 0) {
-            let helmets = gear.helmets.filter(h => h.price <= budgetAllocation.helmet);
+            const goodHelmets = gear.helmets.filter(h => 
+                h.price <= budgetAllocation.helmet && 
+                h.price >= budgetAllocation.helmet * 0.3 && // 至少用30%的预算
+                (parseInt(h.level || 0) >= 4 || 
+                 h.tags?.some(tag => tag.includes("听力")))
+            );
             
-            // 优先4级头
-            let level4Helmets = helmets.filter(h => parseInt(h.level) === 4);
-            if (level4Helmets.length > 0) {
-                // 选最便宜的4级头
-                level4Helmets.sort((a, b) => (a.price || 0) - (b.price || 0));
-                result.helmet = level4Helmets[0];
+            if (goodHelmets.length > 0) {
+                result.helmet = getRandomItem(goodHelmets);
             } else {
-                // 没有4级头就选最便宜的
-                helmets.sort((a, b) => (a.price || 0) - (b.price || 0));
-                result.helmet = helmets[0];
+                // 选择预算内最贵的3个中的随机一个
+                const affordableHelmets = gear.helmets.filter(h => 
+                    h.price <= budgetAllocation.helmet
+                );
+                const topAffordable = affordableHelmets
+                    .sort((a, b) => (b.price || 0) - (a.price || 0))
+                    .slice(0, 3);
+                result.helmet = getRandomItem(topAffordable.length > 0 ? topAffordable : affordableHelmets);
             }
         }
         
-        // 护甲：选4级甲
+        // 护甲：随机选择4级甲
         if (gear.armors && gear.armors.length > 0) {
-            let armors = gear.armors.filter(a => a.price <= budgetAllocation.armor);
+            const goodArmors = gear.armors.filter(a => 
+                a.price <= budgetAllocation.armor && 
+                a.price >= budgetAllocation.armor * 0.4 && // 至少用40%的预算
+                parseInt(a.level || 0) >= 4
+            );
             
-            // 优先4级甲
-            let level4Armors = armors.filter(a => parseInt(a.level) === 4);
-            if (level4Armors.length > 0) {
-                level4Armors.sort((a, b) => (a.price || 0) - (b.price || 0));
-                result.armor = level4Armors[0];
+            if (goodArmors.length > 0) {
+                result.armor = getRandomItem(goodArmors);
             } else {
-                armors.sort((a, b) => (a.price || 0) - (b.price || 0));
-                result.armor = armors[0];
+                // 选择预算内最好的3个中的随机一个
+                const affordableArmors = gear.armors.filter(a => 
+                    a.price <= budgetAllocation.armor
+                );
+                const topAffordable = affordableArmors
+                    .sort((a, b) => {
+                        const levelA = parseInt(a.level || 0);
+                        const levelB = parseInt(b.level || 0);
+                        if (levelB !== levelA) return levelB - levelA;
+                        return (b.price || 0) - (a.price || 0);
+                    })
+                    .slice(0, 3);
+                result.armor = getRandomItem(topAffordable.length > 0 ? topAffordable : affordableArmors);
             }
         }
         
-        // 胸挂：选便宜的，但有基本容量
+        // 胸挂：随机选择中等容量的
         if (gear.chest_rigs && gear.chest_rigs.length > 0) {
-            let chestRigs = gear.chest_rigs.filter(c => c.price <= budgetAllocation.chest_rig);
-            chestRigs.sort((a, b) => (a.price || 0) - (b.price || 0));
-            result.chest_rig = chestRigs[0];
+            const mediumRigs = gear.chest_rigs.filter(c => 
+                c.price <= budgetAllocation.chest_rig && 
+                c.id !== "无" &&
+                (c.slots || 0) >= 9
+            );
+            result.chest_rig = getRandomItem(mediumRigs.length > 0 ? mediumRigs : gear.chest_rigs);
         }
         
-        // 背包：选便宜的
+        // 背包：随机选择中等容量的
         if (gear.backpacks && gear.backpacks.length > 0) {
-            let backpacks = gear.backpacks.filter(b => b.price <= budgetAllocation.backpack);
-            backpacks.sort((a, b) => (a.price || 0) - (b.price || 0));
-            result.backpack = backpacks[0];
+            const mediumBackpacks = gear.backpacks.filter(b => 
+                b.price <= budgetAllocation.backpack && 
+                b.id !== "无" &&
+                (b.slots || 0) >= 15
+            );
+            result.backpack = getRandomItem(mediumBackpacks.length > 0 ? mediumBackpacks : gear.backpacks);
         }
     }
-    // 鼠鼠玩家 - 选最便宜的
+    // 鼠鼠玩家 - 多种便宜选择
     else {
-        // 头盔：选最便宜的
+        // 头盔：随机选择便宜头盔
         if (gear.helmets && gear.helmets.length > 0) {
-            let helmets = gear.helmets.filter(h => h.price <= budgetAllocation.helmet);
-            helmets.sort((a, b) => (a.price || 0) - (b.price || 0));
-            result.helmet = helmets[0];
+            const cheapHelmets = gear.helmets.filter(h => 
+                h.price <= Math.min(budgetAllocation.helmet, 50000) // 最多5万
+            );
+            result.helmet = getRandomItem(cheapHelmets.length > 0 ? cheapHelmets : gear.helmets);
         }
         
-        // 护甲：选最便宜的
+        // 护甲：随机选择便宜护甲
         if (gear.armors && gear.armors.length > 0) {
-            let armors = gear.armors.filter(a => a.price <= budgetAllocation.armor);
-            armors.sort((a, b) => (a.price || 0) - (b.price || 0));
-            result.armor = armors[0];
+            const cheapArmors = gear.armors.filter(a => 
+                a.price <= Math.min(budgetAllocation.armor, 80000) // 最多8万
+            );
+            result.armor = getRandomItem(cheapArmors.length > 0 ? cheapArmors : gear.armors);
         }
         
-        // 胸挂：选容量最大的（因为要装东西）
+        // 胸挂：随机选择大容量的
         if (gear.chest_rigs && gear.chest_rigs.length > 0) {
-            let chestRigs = gear.chest_rigs.filter(c => c.price <= budgetAllocation.chest_rig);
-            chestRigs.sort((a, b) => (b.slots || 0) - (a.slots || 0));
-            result.chest_rig = chestRigs[0];
+            const largeRigs = gear.chest_rigs.filter(c => 
+                c.price <= budgetAllocation.chest_rig && 
+                c.id !== "无" &&
+                (c.slots || 0) >= 12
+            );
+            result.chest_rig = getRandomItem(largeRigs.length > 0 ? largeRigs : gear.chest_rigs);
         }
         
-        // 背包：选容量最大的
+        // 背包：随机选择大容量的
         if (gear.backpacks && gear.backpacks.length > 0) {
-            let backpacks = gear.backpacks.filter(b => b.price <= budgetAllocation.backpack);
-            backpacks.sort((a, b) => (b.slots || 0) - (a.slots || 0));
-            result.backpack = backpacks[0];
+            const largeBackpacks = gear.backpacks.filter(b => 
+                b.price <= budgetAllocation.backpack && 
+                b.id !== "无" &&
+                (b.slots || 0) >= 20
+            );
+            result.backpack = getRandomItem(largeBackpacks.length > 0 ? largeBackpacks : gear.backpacks);
         }
     }
     
+    console.log("选择的装备:", {
+        头盔: result.helmet?.name,
+        护甲: result.armor?.name,
+        胸挂: result.chest_rig?.name,
+        背包: result.backpack?.name
+    });
+    
     return result;
+}
+
+// 新增：从物品数组中随机选择一个
+function getRandomItem(items) {
+    if (!items || items.length === 0) return null;
+    const randomIndex = Math.floor(Math.random() * items.length);
+    return items[randomIndex];
 }
 // 选择干员
 function selectOperators(operators, playerType) {
@@ -2294,6 +2929,19 @@ function selectOperators(operators, playerType) {
         return typeScoreB - typeScoreA;
     });
     
+    // 确保至少返回一个干员
+    if (sortedOperators.length === 0) {
+        console.log('没有找到适配干员，使用默认干员');
+        // 返回第一个干员作为默认
+        if (operators.length > 0) {
+            const defaultOperator = operators[0];
+            return [{ ...defaultOperator, id: defaultOperator.id || defaultOperator.name.replace(/[^\w]/g, '_').toLowerCase() }];
+        } else {
+            // 如果没有干员数据，返回一个默认干员
+            return [{ id: 'default', name: '默认干员', type: '突击', skills: { main: '默认技能' }, suitable_for_players: {} }];
+        }
+    }
+    
     // 返回前3个，确保每个都有id
     return sortedOperators.slice(0, 3).map(op => {
         // 如果干员没有id，给一个基于名称的id
@@ -2334,35 +2982,201 @@ function getOverallStrength(weapon, gear) {
     if (avgStrength >= 1.5) return "C级";
     return "D级";
 }
+// 简化版武器选择函数（生成失败时的备选方案）
+function selectSimpleWeapon(playerType, weaponBudget) {
+    console.log(`=== 简化武器选择开始 ===`);
+    console.log(`玩家类型: ${playerType}, 武器预算: ${weaponBudget}`);
+    
+    // 1. 首先尝试找到预算内的武器（排除无枪）
+    let budgetWeapons = localWeaponsData.filter(weapon => 
+        weapon.price <= weaponBudget && 
+        weapon.id !== "无枪" &&
+        weapon.price > 0
+    );
+    
+    console.log(`预算内武器数量: ${budgetWeapons.length}`);
+    
+    // 2. 如果预算内没有武器，选择最便宜的武器
+    if (budgetWeapons.length === 0) {
+        console.log("预算内无武器，选择最便宜的武器");
+        budgetWeapons = [...localWeaponsData]
+            .filter(w => w.id !== "无枪" && w.price > 0)
+            .sort((a, b) => a.price - b.price)
+            .slice(0, 5);
+    }
+    
+    // 3. 如果还是没有武器，使用无枪选项
+    if (budgetWeapons.length === 0) {
+        console.log("没有找到任何武器，使用无枪选项");
+        const noGun = localWeaponsData.find(w => w.id === "无枪");
+        if (noGun) {
+            return noGun;
+        } else {
+            // 如果连无枪都没有，创建一个默认的无枪选项
+            return {
+                id: "无枪",
+                name: "无枪",
+                type: "无",
+                price: 0,
+                strength: "C",
+                pros: "零成本",
+                cons: "无自卫能力"
+            };
+        }
+    }
+    
+    // 4. 根据玩家类型选择合适的武器
+    let selectedWeapon;
+    
+    if (playerType === "猛攻流") {
+        // 猛攻流：选择预算内最贵的武器
+        budgetWeapons.sort((a, b) => b.price - a.price);
+        selectedWeapon = budgetWeapons[0];
+    } else if (playerType === "堵点夺舍") {
+        // 堵点夺舍：选择性价比高的武器
+        budgetWeapons.sort((a, b) => b.price - a.price);
+        selectedWeapon = budgetWeapons[Math.min(1, budgetWeapons.length - 1)];
+    } else {
+        // 鼠鼠：选择最便宜的武器
+        budgetWeapons.sort((a, b) => a.price - b.price);
+        selectedWeapon = budgetWeapons[0];
+    }
+    
+    console.log(`简化选择: ${selectedWeapon.name}, 价格: ${formatPrice(selectedWeapon.price)}`);
+    console.log(`=== 简化武器选择结束 ===\n`);
+    
+    return selectedWeapon;
+}
+
+// 简化版装备选择函数（生成失败时的备选方案）
+function selectSimpleGear(playerType, totalBudget) {
+    console.log(`=== 简化装备选择开始 ===`);
+    console.log(`玩家类型: ${playerType}, 总预算: ${totalBudget}`);
+    
+    const result = {};
+    
+    // 分配装备预算
+    const gearBudget = totalBudget * 0.4; // 40%预算用于装备
+    const categoryBudgets = {
+        helmet: gearBudget * 0.2,
+        armor: gearBudget * 0.4,
+        chest_rig: gearBudget * 0.2,
+        backpack: gearBudget * 0.2
+    };
+    
+    console.log(`装备预算分配:`, categoryBudgets);
+    
+    // 选择头盔
+    if (localGearData.helmets && localGearData.helmets.length > 0) {
+        const affordableHelmets = localGearData.helmets.filter(h => 
+            h.price <= categoryBudgets.helmet
+        );
+        
+        if (affordableHelmets.length > 0) {
+            // 鼠鼠选择最便宜的，其他人选择中等价位的
+            if (playerType === "鼠鼠") {
+                affordableHelmets.sort((a, b) => a.price - b.price);
+                result.helmet = affordableHelmets[0];
+            } else {
+                affordableHelmets.sort((a, b) => b.price - a.price);
+                result.helmet = affordableHelmets[Math.min(1, affordableHelmets.length - 1)];
+            }
+        } else {
+            // 选择最便宜的头盔
+            const cheapestHelmets = [...localGearData.helmets].sort((a, b) => a.price - b.price);
+            result.helmet = cheapestHelmets[0];
+        }
+    }
+    
+    // 选择护甲
+    if (localGearData.armors && localGearData.armors.length > 0) {
+        const affordableArmors = localGearData.armors.filter(a => 
+            a.price <= categoryBudgets.armor
+        );
+        
+        if (affordableArmors.length > 0) {
+            // 鼠鼠选择最便宜的，其他人选择中等价位的
+            if (playerType === "鼠鼠") {
+                affordableArmors.sort((a, b) => a.price - b.price);
+                result.armor = affordableArmors[0];
+            } else {
+                affordableArmors.sort((a, b) => b.price - a.price);
+                result.armor = affordableArmors[Math.min(1, affordableArmors.length - 1)];
+            }
+        } else {
+            // 选择最便宜的护甲
+            const cheapestArmors = [...localGearData.armors].sort((a, b) => a.price - b.price);
+            result.armor = cheapestArmors[0];
+        }
+    }
+    
+    // 选择胸挂
+    if (localGearData.chest_rigs && localGearData.chest_rigs.length > 0) {
+        const affordableRigs = localGearData.chest_rigs.filter(c => 
+            c.price <= categoryBudgets.chest_rig && c.id !== "无"
+        );
+        
+        if (affordableRigs.length > 0) {
+            // 鼠鼠选择大容量的，其他人选择中等的
+            if (playerType === "鼠鼠") {
+                affordableRigs.sort((a, b) => (b.slots || 0) - (a.slots || 0));
+                result.chest_rig = affordableRigs[0];
+            } else {
+                affordableRigs.sort((a, b) => b.price - a.price);
+                result.chest_rig = affordableRigs[Math.min(1, affordableRigs.length - 1)];
+            }
+        } else {
+            // 选择默认胸挂
+            const defaultRig = localGearData.chest_rigs.find(c => c.id !== "无") || localGearData.chest_rigs[0];
+            result.chest_rig = defaultRig;
+        }
+    }
+    
+    // 选择背包
+    if (localGearData.backpacks && localGearData.backpacks.length > 0) {
+        const affordableBackpacks = localGearData.backpacks.filter(b => 
+            b.price <= categoryBudgets.backpack && b.id !== "无"
+        );
+        
+        if (affordableBackpacks.length > 0) {
+            // 鼠鼠选择大容量的，其他人选择中等的
+            if (playerType === "鼠鼠") {
+                affordableBackpacks.sort((a, b) => (b.slots || 0) - (a.slots || 0));
+                result.backpack = affordableBackpacks[0];
+            } else {
+                affordableBackpacks.sort((a, b) => b.price - a.price);
+                result.backpack = affordableBackpacks[Math.min(1, affordableBackpacks.length - 1)];
+            }
+        } else {
+            // 选择默认背包
+            const defaultBackpack = localGearData.backpacks.find(b => b.id !== "无") || localGearData.backpacks[0];
+            result.backpack = defaultBackpack;
+        }
+    }
+    
+    console.log("简化选择的装备:", {
+        头盔: result.helmet?.name,
+        护甲: result.armor?.name,
+        胸挂: result.chest_rig?.name,
+        背包: result.backpack?.name
+    });
+    console.log(`=== 简化装备选择结束 ===\n`);
+    
+    return result;
+}
+
 // 显示配装结果（简化版）
-function displayLoadout(weapon, gear, operators, budgetAllocation) {
+function displayLoadout(weapon, gear, operators, budgetAllocation, totalCost) {
     const container = document.getElementById('loadoutResult');
     
-    // 计算总成本
-    const weaponCost = weapon ? (weapon.price || 0) : 0;
-    const gearCost = Object.values(gear).reduce((sum, item) => sum + (item ? (item.price || 0) : 0), 0);
-    const consumableCost = budgetAllocation.medical + budgetAllocation.ammo;
-    const totalCost = weaponCost + gearCost + consumableCost;
-    const remainingBudget = currentBudget - totalCost;
-    const budgetUtilization = (totalCost / currentBudget) * 100;
-    // 在displayLoadout函数中，在预算统计部分添加警告
-if (totalCost > currentBudget) {
-    html += `
-        <div class="mt-4 p-3 bg-red-900/30 border border-red-700 rounded-lg">
-            <div class="flex items-center mb-2">
-                <i class="fas fa-exclamation-triangle text-red-400 mr-2"></i>
-                <p class="font-bold text-red-300">⚠️ 警告：配装超出预算！</p>
-            </div>
-            <p class="text-sm">总成本${formatPrice(totalCost)}超过预算${formatPrice(currentBudget)}，超出${formatPrice(totalCost - currentBudget)}</p>
-            <p class="text-sm mt-2">建议：</p>
-            <ul class="text-sm text-gray-300 mt-1 list-disc pl-5">
-                <li>降低武器或防具等级</li>
-                <li>减少药品和弹药携带量</li>
-                <li>点击"重新生成"尝试其他方案</li>
-            </ul>
-        </div>
-    `;
-}
+    // 计算预算使用情况（使用传入的totalCost，确保与实际一致）
+    // 确保totalCost不超过currentBudget，防止负数
+    const actualTotalCost = Math.min(totalCost, currentBudget);
+    const remainingBudget = currentBudget - actualTotalCost;
+    const budgetUtilization = (actualTotalCost / currentBudget) * 100;
+    
+    // 确保预算利用率不超过100%
+    const clampedBudgetUtilization = Math.min(budgetUtilization, 100);
     // 添加装备强度函数（如果未定义）
     if (typeof getOverallStrength !== 'function') {
         function getOverallStrength(weapon, gear) {
@@ -2386,10 +3200,10 @@ if (totalCost > currentBudget) {
     
     // 预算使用建议
     let budgetAdvice = "";
-    if (budgetUtilization < 50) {
+    if (clampedBudgetUtilization < 50) {
         budgetAdvice = `<div class="mt-4 p-3 bg-yellow-900/30 border border-yellow-700/50 rounded-lg">
             <p class="font-bold text-yellow-300 mb-2">💡 预算使用建议</p>
-            <p class="text-sm">当前预算仅使用了${Math.round(budgetUtilization)}%，建议：</p>
+            <p class="text-sm">当前预算仅使用了${Math.round(clampedBudgetUtilization)}%，建议：</p>
             <ul class="text-sm text-gray-300 mt-2 list-disc pl-5">
                 ${currentPlayerType === "鼠鼠" ? 
                   `<li>升级背包容量，携带更多战利品</li>
@@ -2444,7 +3258,7 @@ if (totalCost > currentBudget) {
                     </div>
                     <div class="bg-gray-700 p-4 rounded-lg">
                         <p class="text-sm text-gray-400 mb-1">预算利用率</p>
-                        <p class="text-2xl font-bold ${budgetUtilization > 80 ? 'text-green-400' : budgetUtilization > 60 ? 'text-yellow-400' : 'text-red-400'}">${Math.round(budgetUtilization)}%</p>
+                        <p class="text-2xl font-bold ${clampedBudgetUtilization > 80 ? 'text-green-400' : clampedBudgetUtilization > 60 ? 'text-yellow-400' : 'text-red-400'}">${Math.round(clampedBudgetUtilization)}%</p>
                     </div>
                     <div class="bg-gray-700 p-4 rounded-lg">
                         <p class="text-sm text-gray-400 mb-1">装备强度</p>
@@ -2456,14 +3270,14 @@ if (totalCost > currentBudget) {
                 <div class="mt-4">
                     <div class="flex justify-between text-sm mb-1">
                         <span>预算使用进度</span>
-                        <span>${Math.round(budgetUtilization)}%</span>
+                        <span>${Math.round(clampedBudgetUtilization)}%</span>
                     </div>
                     <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${Math.min(budgetUtilization, 100)}%"></div>
+                        <div class="progress-fill" style="width: ${clampedBudgetUtilization}%"></div>
                     </div>
                 </div>
                 
-                ${budgetUtilization < 50 ? budgetAdvice : ''}
+                ${clampedBudgetUtilization < 50 ? budgetAdvice : ''}
             </div>
             
             <!-- 猛攻流特别说明 -->
@@ -2719,35 +3533,113 @@ function shareLoadout() {
             title: '三角洲配装方案',
             text: shareText,
             url: window.location.href
+        }).then(() => {
+            showFeedback('配装方案已分享！');
+        }).catch(err => {
+            console.error('分享失败:', err);
+            showFeedback('分享失败，请尝试复制分享内容', 'error');
         });
     } else {
         // 复制到剪贴板
         navigator.clipboard.writeText(shareText).then(() => {
             showFeedback('配装方案已复制到剪贴板！');
+        }).catch(err => {
+            console.error('复制失败:', err);
+            showFeedback('复制失败，请手动选择并复制分享内容', 'error');
         });
     }
 }
 
 // 问答助手
-function handleQuestion() {
+async function handleQuestion() {
     const input = document.getElementById('questionInput');
     const question = input.value.trim();
     
     if (!question) return;
     
-    // 添加用户消息
+    // 添加用户消息到对话历史
+    conversationHistory.push({ role: 'user', content: question });
+    
+    // 添加用户消息到聊天界面
     addMessageToChat(question, 'user');
     
-    // 获取回答
-    const answer = getAnswer(question);
+    // 显示AI正在思考的状态
+    const thinkingMessageId = addThinkingMessage();
     
-    // 模拟AI思考时间
-    setTimeout(() => {
-        addMessageToChat(answer, 'ai');
-    }, 800);
+    try {
+        // 获取回答（考虑上下文）
+        const answer = getAnswer(question, conversationHistory);
+        
+        // 检查是否是Promise（AI回答）
+        if (answer instanceof Promise) {
+            const aiAnswer = await answer;
+            // 添加AI回答到对话历史
+            conversationHistory.push({ role: 'assistant', content: aiAnswer });
+            // 移除思考消息并显示回答
+            removeThinkingMessage(thinkingMessageId);
+            addMessageToChat(aiAnswer, 'ai');
+        } else {
+            // 添加AI回答到对话历史
+            conversationHistory.push({ role: 'assistant', content: answer });
+            // 移除思考消息并显示回答
+            removeThinkingMessage(thinkingMessageId);
+            addMessageToChat(answer, 'ai');
+        }
+        
+        // 限制对话历史长度，保持最近10条
+        if (conversationHistory.length > 10) {
+            conversationHistory = conversationHistory.slice(-10);
+        }
+    } catch (error) {
+        console.error('Error handling question:', error);
+        // 移除思考消息并显示错误回答
+        removeThinkingMessage(thinkingMessageId);
+        const errorAnswer = '抱歉，我无法回答这个问题，请尝试换一种方式提问。';
+        conversationHistory.push({ role: 'assistant', content: errorAnswer });
+        addMessageToChat(errorAnswer, 'ai');
+    }
     
     // 清空输入框
     input.value = '';
+}
+
+// 添加AI思考消息
+function addThinkingMessage() {
+    const chatContainer = document.getElementById('chatContainer');
+    const messageId = 'thinking-' + Date.now();
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.id = messageId;
+    messageDiv.className = 'chat-message ai mb-4 fade-in';
+    messageDiv.innerHTML = `
+        <div class="flex">
+            <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center mr-3">
+                <i class="fas fa-robot text-sm"></i>
+            </div>
+            <div class="max-w-xs">
+                <p class="text-sm text-gray-400 mb-1">三角洲配装助手</p>
+                <div class="bg-gray-700 p-3 rounded-lg rounded-tl-none">
+                    <div class="flex space-x-1">
+                        <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0s"></div>
+                        <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                        <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    chatContainer.appendChild(messageDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    return messageId;
+}
+
+// 移除思考消息
+function removeThinkingMessage(messageId) {
+    const message = document.getElementById(messageId);
+    if (message) {
+        message.remove();
+    }
 }
 
 // 添加消息到聊天
@@ -2757,12 +3649,14 @@ function addMessageToChat(message, sender) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `chat-message ${sender} mb-4 fade-in`;
     
+    const safeMessage = escapeHtml(message);
+    
     if (sender === 'user') {
         messageDiv.innerHTML = `
             <div class="flex justify-end">
                 <div class="max-w-xs">
                     <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 rounded-lg rounded-tr-none">
-                        ${message}
+                        ${safeMessage}
                     </div>
                     <p class="text-xs text-gray-500 text-right mt-1">您</p>
                 </div>
@@ -2780,7 +3674,7 @@ function addMessageToChat(message, sender) {
                 <div class="max-w-xs">
                     <p class="text-sm text-gray-400 mb-1">三角洲配装助手</p>
                     <div class="bg-gray-700 p-3 rounded-lg rounded-tl-none">
-                        ${message}
+                        ${safeMessage}
                     </div>
                 </div>
             </div>
@@ -2789,45 +3683,219 @@ function addMessageToChat(message, sender) {
     
     chatContainer.appendChild(messageDiv);
     
-    // 滚动到底部
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
+
+const QA_SYNONYMS = {
+    '鼠鼠': ['老鼠', '避战', '捡漏', '垃圾佬'],
+    '堵桥': ['堵点', '蹲守', '掠夺', '老六'],
+    '猛攻': ['猛攻流', '正面', '刚枪', '激进'],
+    'm14': ['M14', '精确射手', '连狙'],
+    '零号大坝': ['大坝', '零号', '行政楼'],
+    '预算': ['资金', '钱', '花费', '成本'],
+    '干员': ['角色', '人物', '英雄'],
+    '头盔': ['帽子', '头', '防护头'],
+    '护甲': ['防弹衣', '甲', '防护衣'],
+    '地图': ['场景', '地图信息'],
+    '武器': ['枪', '枪械', '武器推荐'],
+    '蜂医': ['医生', '奶妈', '支援'],
+    '红狼': ['突击', '战士'],
+    '威龙': ['龙', '机动'],
+    '露娜': ['侦察', '弓箭'],
+    '骇爪': ['黑客', '侦察兵'],
+    '蛊': ['毒', '支援兵'],
+    '蝶': ['无人机', '医疗'],
+    '牧羊人': ['陷阱', '工程'],
+    '乌鲁鲁': ['工程兵', '掩体'],
+    '深蓝': ['盾牌', '坦克'],
+    '航天基地': ['航天', '基地', '堵桥地图'],
+    '潮汐监狱': ['监狱', '室内', '近战'],
+    '长弓溪谷': ['长弓', '溪谷', '狙击'],
+    '巴克什': ['巷战', '城镇'],
+    '冲锋枪': ['SMG', '近程', '快速'],
+    '突击步枪': ['步枪', 'AR', '中距离'],
+    '精确射手步枪': ['连狙', 'DMR', '中远程'],
+    '狙击步枪': ['狙', '远程', '单发'],
+    '轻机枪': ['机枪', '压制', '重火力'],
+    '胸挂': ['胸甲', '弹夹', '装备'],
+    '背包': ['包', '容量', '储存'],
+    '药品': ['医疗', '血包', '回复'],
+    '弹药': ['子弹', '弹匣', '消耗品'],
+    '改枪码': ['改枪', '代码', '配置'],
+    '撤离点': ['撤离', '出口', '离开'],
+    '战备值': ['战备', '等级', '解锁'],
+    '模式': ['难度', '级别', '模式选择'],
+    '玩法': ['策略', '玩法推荐', '风格'],
+    '技巧': ['攻略', '方法', '窍门']
+};
+
+const QA_MAP = {
+    '鼠鼠': '鼠鼠玩法核心是低成本避战，推荐使用UZI、勇士等便宜武器，优先扩大背包容量捡垃圾。干员选择蜂医最佳，可以利用烟雾弹安全撤离。预算分配建议：武器15%，防具15%，背包30%，剩余40%用于药品和备用。',
+    '堵桥': '航天基地堵桥需要高射速武器，如MP7、Vector，选择红狼干员利用烟雾弹和加速转点。建议预算30-50万，武器占40%，防具占35%，注重高爆发和偷袭能力。',
+    '猛攻': '猛攻流需要满改M14、腾龙等S级武器，搭配5-6级防具，主动进攻资源密集区。预算建议70万以上，武器占50%，防具占40%，干员选择威龙或红狼。',
+    'm14': 'M14是游戏内爆发最高武器之一，满改价格85万左右，适合猛攻流玩家。优点：大口径高输出，全距离作战；缺点：后坐力大，需要熟练控枪。',
+    '零号大坝': '零号大坝适合新手，行政楼资源丰富但危险，鼠鼠可以在外围搜刮，猛攻流直接进攻行政楼。地图有8个撤离点，包括常规、条件、概率、付费和电梯撤离。',
+    '预算': '预算分配建议：鼠鼠武器15%、防具15%、背包30%、药品5%、子弹5%、备用30%；猛攻流武器50%、防具40%、其他10%；堵点夺舍武器40%、防具35%、其他25%。',
+    '干员': '红狼适合突击，蜂医适合鼠鼠，露娜适合侦察，威龙适合机动突击。根据玩法选择：鼠鼠选蜂医，堵点选红狼，猛攻选威龙。',
+    '头盔': 'GN重型夜视头价格60万，适合猛攻流；DICH训练头盔13.5万，适合鼠鼠；4级听力头20万，适合堵点玩家。头盔选择根据预算和玩法决定。',
+    '护甲': 'HA-2重型防弹衣350万，顶级防护；TGH防弹衣6.3万，适合新手；MK-2战术背心19.5万，均衡选择。鼠鼠用低级甲，猛攻用高级甲。',
+    '地图': '零号大坝适合新手，航天基地适合堵桥，潮汐监狱适合猛攻，长弓溪谷适合狙击，巴克什适合巷战。不同地图需要不同配装策略。',
+    '武器': '鼠鼠推荐UZI、勇士；堵点推荐MP7、Vector；猛攻推荐M14、腾龙、MK47。根据预算和玩法选择合适武器。',
+    '蜂医': '蜂医是支援型干员，适合鼠鼠玩家。技能包括激素枪（远程治疗）、烟幕无人机（提供掩护）和快速救援。核心优势是自我续航和无敌烟雾撤离。',
+    '红狼': '红狼是突击型干员，适合堵点夺舍和猛攻流。技能包括动力外骨骼（提升移速和射速）、三联装手炮和战术烟雾弹。核心优势是击杀后刷新加速与回血。',
+    '威龙': '威龙是突击型干员，适合猛攻流。技能包括虎蹲炮（控制敌人）、动力推进（快速位移）和磁吸炸弹。核心优势是全方位立体突击能力。',
+    '露娜': '露娜是侦察型干员，适合所有玩法。技能包括探测箭矢（侦查敌人）、电击箭矢和破片手雷。核心优势是全游戏最强的单人预警能力。',
+    '骇爪': '骇爪是侦察型干员，适合堵点夺舍。技能包括信号破译器（全图透视）、闪光巡飞器和数据飞刀。核心优势是全图雷达与增强隐蔽性。',
+    '蛊': '蛊是支援型干员，适合猛攻流。技能包括致盲毒雾、肾上腺素激活（提升团队枪械控制）和流荧集群系统（削弱敌人）。核心优势是团队进攻的力量倍增器。',
+    '蝶': '蝶是支援型干员，适合团队作战。技能包括蝶式救援无人机、纳米粉尘医疗和遥控烟雾。核心优势是安全高效的远程支援与救援。',
+    '牧羊人': '牧羊人是工程型干员，适合堵点防御。技能包括声波陷阱、声波震慑和增强型破片手雷。核心优势是请君入瓮的陷阱大师。',
+    '乌鲁鲁': '乌鲁鲁是工程型干员，适合猛攻流。技能包括巡飞弹（远程打击）、速凝掩体和复合型燃烧弹。核心优势是多功能战术攻坚与支援。',
+    '深蓝': '深蓝是工程型干员，适合团队推进。技能包括重型防爆套装（全身盾）、多功能钩爪枪和刀片刺网手雷。核心优势是团队推进的绝对核心。',
+    '航天基地': '航天基地地形开阔，建筑分散，视野良好。适合堵桥流和狙击玩法。资源点分散于各大厂房和设施内，撤离点约5-6个。',
+    '潮汐监狱': '潮汐监狱以室内复杂结构为主，多层空间，通道狭窄，近距离交战频繁。适合猛攻流玩家，推荐使用高射速冲锋枪和霰弹枪。',
+    '长弓溪谷': '长弓溪谷是山地、森林地形，植被覆盖多，高低差显著。适合远程交战与隐蔽移动，是狙击手和老六的乐园。',
+    '巴克什': '巴克什是城镇巷战与部分开阔地结合的地图。建筑密集，巷子错综复杂，同时也有广场等交火区。适合中近距离作战。',
+    '冲锋枪': '冲锋枪适合近距离作战，推荐MP7、Vector、SR-3M等。优点是射速快、机动性强；缺点是射程短、伤害低。适合潮汐监狱等室内地图。',
+    '突击步枪': '突击步枪适合中近距离作战，推荐K416、AUG、AKM等。优点是综合性能均衡；缺点是没有明显优势。适合大多数地图。',
+    '精确射手步枪': '精确射手步枪适合中远距离作战，推荐M14、SVD等。优点是伤害高、射程远；缺点是后坐力大、射速慢。适合长弓溪谷等开阔地图。',
+    '狙击步枪': '狙击步枪适合远距离作战，推荐马林杠杆等。优点是伤害极高、射程远；缺点是射速慢、容错率低。适合长弓溪谷等开阔地图。',
+    '轻机枪': '轻机枪适合压制和持续射击，推荐PKM、M250等。优点是弹容量大、持续火力强；缺点是机动性差、换弹慢。适合压制敌人和防守。',
+    '胸挂': '胸挂推荐强袭战术背心（14格）、GIR野战胸挂（16格）、通用战术胸挂（9格）。鼠鼠玩家推荐大容量胸挂，猛攻流玩家可以选择基础胸挂。',
+    '背包': '背包推荐GA野战背包（20格，无移速惩罚）、D3战术登山包（28格，移速仅-1%）。鼠鼠玩家优先选择大容量背包，猛攻流玩家可以选择基础背包。',
+    '药品': '药品推荐：鼠鼠玩家携带基础药品（3-5万），堵点夺舍玩家携带中级药品（5-8万），猛攻流玩家携带高级药品（8-15万）。',
+    '弹药': '弹药推荐：鼠鼠玩家携带基础弹药（2-3万），堵点夺舍玩家携带中级弹药（5-10万），猛攻流玩家携带高级弹药（10-20万）。',
+    '改枪码': '改枪码是游戏中用于快速复制武器配置的代码。在武器详情页面可以找到改枪码，点击复制按钮即可复制到剪贴板，然后在游戏中粘贴使用。',
+    '撤离点': '撤离点分为常规、条件、概率、付费和电梯撤离。常规撤离点固定开放，条件撤离点需满足特定条件，概率撤离点随机开放，付费撤离点需要支付哈夫币，电梯撤离点需要拉闸开启。',
+    '战备值': '战备值是游戏中的一种资源，用于解锁机密和绝密模式。不同地图和模式有不同的战备值要求，玩家需要达到要求才能进入相应模式。',
+    '模式': '游戏模式分为常规、机密和绝密。常规模式无成本限制，适合新手；机密模式有最低成本要求，适合有一定装备基础的玩家；绝密模式有高成本要求，适合装备成型的玩家。',
+    '玩法': '游戏玩法主要分为鼠鼠（避战捡漏）、堵点夺舍（蹲守掠夺）和猛攻流（正面作战）。不同玩法需要不同的配装策略和干员选择。',
+    '技巧': '游戏技巧：1. 鼠鼠玩家要学会快速搜刮和安全撤离；2. 堵点玩家要选择合适的埋伏位置和时机；3. 猛攻玩家要掌握高级武器的控枪技巧；4. 所有玩家都要学会合理分配预算和选择合适的干员。'
+};
+
+const REVERSE_SYNONYM_MAP = {};
+(function buildReverseMap() {
+    for (const [keyword, synonymList] of Object.entries(QA_SYNONYMS)) {
+        REVERSE_SYNONYM_MAP[keyword.toLowerCase()] = keyword;
+        for (const syn of synonymList) {
+            REVERSE_SYNONYM_MAP[syn.toLowerCase()] = keyword;
+        }
+    }
+    for (const keyword of Object.keys(QA_MAP)) {
+        REVERSE_SYNONYM_MAP[keyword.toLowerCase()] = keyword;
+    }
+})();
+
+const FOLLOW_UP_KEYWORDS = ['推荐', '建议', '怎么', '如何'];
+
+function isFollowUpQuestion(text) {
+    return FOLLOW_UP_KEYWORDS.some(kw => text.includes(kw));
+}
+
+function findMatchingKeyword(text) {
+    if (!text) return null;
+    try {
+        const lowerText = text.toLowerCase();
+        const entries = Object.entries(REVERSE_SYNONYM_MAP);
+        for (let i = 0; i < entries.length; i++) {
+            const [word, keyword] = entries[i];
+            if (lowerText.includes(word)) {
+                return keyword;
+            }
+        }
+    } catch (e) {
+        console.error('findMatchingKeyword error:', e);
+    }
+    return null;
+}
+
+function getRecentUserContext(history, count = 2) {
+    const contexts = [];
+    for (let i = history.length - 2; i >= 0 && contexts.length < count; i--) {
+        if (history[i].role === 'user') {
+            contexts.unshift(history[i].content.toLowerCase());
+        }
+    }
+    return contexts;
+}
+
+function getPlayerTypeRecommendation(playerType) {
+    const recommendations = {
+        '鼠鼠': '作为鼠鼠玩家，我建议你：\n1. 武器选择：UZI、勇士等便宜武器（10-30万）\n2. 防具选择：TGH防弹衣、DICH训练头盔（基础防护）\n3. 背包选择：GA野战背包或D3战术登山包（大容量）\n4. 干员选择：蜂医（烟雾弹安全撤离）\n5. 预算分配：武器15%、防具15%、背包30%、药品5%、子弹5%、备用30%',
+        '堵点夺舍': '作为堵点夺舍玩家，我建议你：\n1. 武器选择：MP7、Vector等高射速武器（30-60万）\n2. 防具选择：4级听力头、MK-2战术背心（均衡防护）\n3. 背包选择：基础背包即可（注重机动性）\n4. 干员选择：红狼或露娜（偷袭和预警）\n5. 预算分配：武器40%、防具35%、其他25%',
+        '猛攻流': '作为猛攻流玩家，我建议你：\n1. 武器选择：满改M14、腾龙等S级武器（70万+）\n2. 防具选择：GN重型夜视头、HA-2重型防弹衣（顶级防护）\n3. 背包选择：基础背包即可（注重输出）\n4. 干员选择：威龙或红狼（正面作战）\n5. 预算分配：武器50%、防具40%、其他10%'
+    };
+    return recommendations[playerType] || recommendations['猛攻流'];
+}
+
+function getContextBasedRecommendation(context) {
+    const keyword = findMatchingKeyword(context);
+    if (!keyword) return null;
+    
+    const contextRecommendations = {
+        '鼠鼠': '作为鼠鼠玩家，我推荐你：1. 使用UZI或勇士等便宜武器；2. 选择大容量背包和胸挂；3. 使用蜂医干员的烟雾弹安全撤离；4. 预算控制在30万以下，优先保证背包容量。',
+        '堵桥': '作为堵点夺舍玩家，我推荐你：1. 使用MP7或Vector等高射速武器；2. 选择4级听力头提高预警能力；3. 使用红狼或露娜干员；4. 预算控制在30-50万，注重武器爆发能力。',
+        '猛攻': '作为猛攻流玩家，我推荐你：1. 使用满改M14或腾龙等S级武器；2. 选择5-6级防具；3. 使用威龙或红狼干员；4. 预算70万以上，追求最高输出。'
+    };
+    return contextRecommendations[keyword] || null;
+}
+
 // 获取回答
-function getAnswer(question) {
+function getAnswer(question, conversationHistory = []) {
     const q = question.toLowerCase();
     
-    // 扩展问答库
-    const qaMap = {
-        '鼠鼠': '鼠鼠玩法核心是低成本避战，推荐使用UZI、勇士等便宜武器，优先扩大背包容量捡垃圾。干员选择蜂医最佳，可以利用烟雾弹安全撤离。预算分配建议：武器15%，防具15%，背包30%，剩余40%用于药品和备用。',
-        '堵桥': '航天基地堵桥需要高射速武器，如MP7、Vector，选择红狼干员利用烟雾弹和加速转点。建议预算30-50万，武器占40%，防具占35%，注重高爆发和偷袭能力。',
-        '猛攻': '猛攻流需要满改M14、腾龙等S级武器，搭配5-6级防具，主动进攻资源密集区。预算建议70万以上，武器占50%，防具占40%，干员选择威龙或红狼。',
-        'm14': 'M14是游戏内爆发最高武器之一，满改价格85万左右，适合猛攻流玩家。优点：大口径高输出，全距离作战；缺点：后坐力大，需要熟练控枪。',
-        '零号大坝': '零号大坝适合新手，行政楼资源丰富但危险，鼠鼠可以在外围搜刮，猛攻流直接进攻行政楼。地图有8个撤离点，包括常规、条件、概率、付费和电梯撤离。',
-        '预算': '预算分配建议：鼠鼠武器15%、防具15%、背包30%、药品5%、子弹5%、备用30%；猛攻流武器50%、防具40%、其他10%；堵点夺舍武器40%、防具35%、其他25%。',
-        '干员': '红狼适合突击，蜂医适合鼠鼠，露娜适合侦察，威龙适合机动突击。根据玩法选择：鼠鼠选蜂医，堵点选红狼，猛攻选威龙。',
-        '头盔': 'GN重型夜视头价格60万，适合猛攻流；DICH训练头盔13.5万，适合鼠鼠；4级听力头20万，适合堵点玩家。头盔选择根据预算和玩法决定。',
-        '护甲': 'HA-2重型防弹衣350万，顶级防护；TGH防弹衣6.3万，适合新手；MK-2战术背心19.5万，均衡选择。鼠鼠用低级甲，猛攻用高级甲。',
-        '地图': '零号大坝适合新手，航天基地适合堵桥，潮汐监狱适合猛攻，长弓溪谷适合狙击，巴克什适合巷战。不同地图需要不同配装策略。',
-        '武器': '鼠鼠推荐UZI、勇士；堵点推荐MP7、Vector；猛攻推荐M14、腾龙、MK47。根据预算和玩法选择合适武器。'
-    };
+    const contexts = getRecentUserContext(conversationHistory);
+    const keyword = findMatchingKeyword(q);
     
-    // 关键词匹配
-    for (const [keyword, answer] of Object.entries(qaMap)) {
-        if (q.includes(keyword)) {
-            return answer;
+    if (keyword && QA_MAP[keyword]) {
+        if (contexts.length > 0 && isFollowUpQuestion(q)) {
+            const contextRecommendation = getContextBasedRecommendation(contexts[0]);
+            if (contextRecommendation) {
+                return contextRecommendation;
+            }
+        }
+        return QA_MAP[keyword];
+    }
+    
+    for (const ctx of contexts) {
+        const ctxKeyword = findMatchingKeyword(ctx);
+        if (ctxKeyword && QA_MAP[ctxKeyword]) {
+            if (isFollowUpQuestion(q)) {
+                const contextRecommendation = getContextBasedRecommendation(ctx);
+                if (contextRecommendation) {
+                    return contextRecommendation;
+                }
+            }
+            return QA_MAP[ctxKeyword];
         }
     }
     
-    // 如果没有匹配，基于当前设置给出建议
-    return `根据你当前的设置（${currentPlayerType}玩法，预算${formatPrice(currentBudget)}，地图${getMapName(currentMap)}，模式${currentMode}），建议：${
-        currentPlayerType === '鼠鼠' ? '选择便宜武器(10-30万)，优先背包容量，使用蜂医干员安全撤离。' :
-        currentPlayerType === '堵点夺舍' ? '选择高爆发武器(30-60万)，注重偷袭，使用红狼或露娜干员。' :
-        '选择顶级装备(70万+)，正面作战，使用威龙或蛊干员。'
-    }`;
+    if (isFollowUpQuestion(q)) {
+        return getPlayerTypeRecommendation(currentPlayerType);
+    }
+    
+    if (aiEnabled && openaiApiKey) {
+        return generateAnswerWithAI(question, conversationHistory);
+    }
+    
+    const mapName = getMapName(currentMap);
+    const budgetStr = formatPrice(currentBudget);
+    const defaultSuggestions = {
+        '鼠鼠': '选择便宜武器(10-30万)，优先背包容量，使用蜂医干员安全撤离。',
+        '堵点夺舍': '选择高爆发武器(30-60万)，注重偷袭，使用红狼或露娜干员。',
+        '猛攻流': '选择顶级装备(70万+)，正面作战，使用威龙或蛊干员。'
+    };
+    const suggestion = defaultSuggestions[currentPlayerType] || defaultSuggestions['猛攻流'];
+    return `根据你当前的设置（${currentPlayerType}玩法，预算${budgetStr}，地图${mapName}，模式${currentMode}），建议：${suggestion}`;
 }
 
 // ========== 工具函数 ==========
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
 
 // 格式化价格
 function formatPrice(price) {
@@ -2907,6 +3975,74 @@ function getGearIcon(type) {
     return icons[type] || "box";
 }
 
+// 显示反馈提示
+function showFeedback(message, type = 'success') {
+    // 创建提示元素
+    const feedback = document.createElement('div');
+    feedback.id = 'feedbackMessage';
+    
+    // 设置样式
+    feedback.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 16px 24px;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        z-index: 9999;
+        transform: translateY(100px);
+        opacity: 0;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 500;
+        max-width: 350px;
+    `;
+    
+    // 根据类型设置颜色
+    if (type === 'success') {
+        feedback.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+        feedback.style.color = 'white';
+    } else if (type === 'error') {
+        feedback.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+        feedback.style.color = 'white';
+    } else if (type === 'info') {
+        feedback.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)';
+        feedback.style.color = 'white';
+    } else {
+        feedback.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+        feedback.style.color = 'white';
+    }
+    
+    // 设置内容
+    const icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle';
+    feedback.innerHTML = `
+        <i class="fas ${icon}" style="font-size: 1.25rem;"></i>
+        <span>${message}</span>
+    `;
+    
+    // 添加到页面
+    document.body.appendChild(feedback);
+    
+    // 显示动画
+    requestAnimationFrame(() => {
+        feedback.style.transform = 'translateY(0)';
+        feedback.style.opacity = '1';
+    });
+    
+    // 3秒后隐藏
+    setTimeout(() => {
+        feedback.style.transform = 'translateY(100px)';
+        feedback.style.opacity = '0';
+        setTimeout(() => {
+            if (feedback.parentNode) {
+                feedback.parentNode.removeChild(feedback);
+            }
+        }, 400);
+    }, 3000);
+}
+
 // 复制改枪码
 function copyCode(code) {
     navigator.clipboard.writeText(code).then(() => {
@@ -2915,6 +4051,70 @@ function copyCode(code) {
         console.error('复制失败:', err);
         alert('复制失败，请手动选择并复制代码');
     });
+}
+
+// 生成AI回答
+async function generateAnswerWithAI(question, conversationHistory) {
+    try {
+        // 构建系统提示
+        const systemPrompt = `你是三角洲配装助手，专注于游戏《三角洲行动》的配装和战术建议。
+
+游戏玩法分为三种：
+1. 鼠鼠（避战/捡漏）：低成本避战，优先扩大背包容量捡垃圾
+2. 堵点夺舍（蹲守/掠夺）：选择敌人必经之路埋伏，一击必杀
+3. 猛攻流（正面作战）：使用顶级装备，主动进攻资源密集区
+
+当前用户设置：
+- 玩法：${currentPlayerType}
+- 预算：${formatPrice(currentBudget)}
+- 地图：${getMapName(currentMap)}
+- 模式：${currentMode}
+
+请根据用户的问题提供专业、准确的游戏建议，包括武器选择、防具推荐、干员选择、预算分配等方面。`;
+
+        // 构建消息历史
+        const messages = [
+            { role: 'system', content: systemPrompt }
+        ];
+
+        // 添加最近的对话历史
+        if (conversationHistory.length > 0) {
+            messages.push(...conversationHistory.slice(-5)); // 只使用最近5条对话
+        }
+
+        // 添加当前问题
+        messages.push({ role: 'user', content: question });
+
+        // 调用OpenAI API
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${openaiApiKey}`
+            },
+            body: JSON.stringify({
+                model: 'gpt-3.5-turbo',
+                messages: messages,
+                max_tokens: 500,
+                temperature: 0.7
+            })
+        });
+
+        const data = await response.json();
+        if (data.choices && data.choices.length > 0) {
+            return data.choices[0].message.content;
+        } else {
+            throw new Error('AI response error');
+        }
+    } catch (error) {
+        console.error('AI generation error:', error);
+        // 失败时返回默认回答
+        return `根据你当前的设置（${currentPlayerType}玩法，预算${formatPrice(currentBudget)}，地图${getMapName(currentMap)}，模式${currentMode}），建议：${
+            currentPlayerType === '鼠鼠' ? '选择便宜武器(10-30万)，优先背包容量，使用蜂医干员安全撤离。' :
+            currentPlayerType === '堵点夺舍' ? '选择高爆发武器(30-60万)，注重偷袭，使用红狼或露娜干员。' :
+            '选择顶级装备(70万+)，正面作战，使用威龙或蛊干员。'
+        }`;
+    }
 }
 
 // 初始化完成

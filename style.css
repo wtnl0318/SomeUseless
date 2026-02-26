@@ -3,43 +3,100 @@
 /* 基础样式 */
 body {
     font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #1e293b 100%);
     min-height: 100vh;
+    scroll-snap-type: y mandatory;
+    overflow-y: auto;
+}
+
+/* 滚动快照效果 */
+section {
+    scroll-snap-align: start;
+    scroll-margin-top: 80px; /* 为导航栏留出空间 */
 }
 
 /* 导航链接 */
 .nav-link {
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    transition: all 0.2s;
+    padding: 0.75rem 1.25rem;
+    border-radius: 0.75rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.nav-link::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    transition: left 0.5s;
+}
+
+.nav-link:hover::before {
+    left: 100%;
 }
 
 .nav-link:hover {
     background-color: #374151;
     color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
 .nav-link.active {
     background: linear-gradient(to right, #2563eb, #7c3aed);
     color: white;
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+    transform: translateY(-1px);
+}
+
+/* 导航栏增强 */
+nav {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    backdrop-filter: blur(10px);
+    background-color: rgba(31, 41, 55, 0.95);
 }
 
 /* 玩家类型按钮 - 增强反馈 */
 .player-type-btn {
     background-color: #374151;
     border: 2px solid transparent;
-    transition: all 0.3s;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.player-type-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.2), transparent);
+    transition: left 0.6s;
+}
+
+.player-type-btn:hover::before {
+    left: 100%;
 }
 
 .player-type-btn:hover {
     background-color: #4b5563;
-    transform: translateY(-2px);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
 }
 
 .player-type-btn.active {
     border-color: #3b82f6;
     background-color: #4b5563;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 6px 24px rgba(59, 130, 246, 0.4);
+    transform: translateY(-2px);
 }
 
 /* 地图模式按钮 */
@@ -73,92 +130,269 @@ body {
 
 /* 干员筛选按钮 */
 .operator-filter-btn {
-    padding: 0.5rem 1rem;
+    padding: 0.75rem 1.25rem;
     background-color: #374151;
-    border-radius: 0.5rem;
-    transition: all 0.2s;
+    border-radius: 0.75rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.operator-filter-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.2), transparent);
+    transition: left 0.6s;
+}
+
+.operator-filter-btn:hover::before {
+    left: 100%;
 }
 
 .operator-filter-btn:hover {
     background-color: #4b5563;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 .operator-filter-btn.active {
     background: linear-gradient(to right, #2563eb, #7c3aed);
     color: white;
+    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+    transform: translateY(-1px);
 }
 
 /* 快速问题按钮 */
 .quick-question-btn {
-    padding: 0.5rem 0.75rem;
+    padding: 0.75rem 1rem;
     background-color: #374151;
-    border-radius: 0.5rem;
+    border-radius: 0.75rem;
     font-size: 0.875rem;
-    transition: all 0.2s;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(75, 85, 99, 0.3);
+}
+
+.quick-question-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.2), transparent);
+    transition: left 0.6s;
+}
+
+.quick-question-btn:hover::before {
+    left: 100%;
 }
 
 .quick-question-btn:hover {
     background-color: #4b5563;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    border-color: rgba(59, 130, 246, 0.5);
+}
+
+/* 聊天输入框和发送按钮 */
+#questionInput {
+    transition: all 0.3s;
+    border: 2px solid transparent;
+}
+
+#questionInput:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+#askBtn {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+#askBtn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.6s;
+}
+
+#askBtn:hover::before {
+    left: 100%;
+}
+
+#askBtn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
+
+#askBtn:active {
+    transform: scale(0.95);
 }
 
 /* 自定义滑块 */
+.slider {
+    transition: all 0.3s;
+}
+
+.slider:hover {
+    transform: scale(1.02);
+}
+
 .slider::-webkit-slider-thumb {
     appearance: none;
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
     cursor: pointer;
     border: 2px solid #1f2937;
+    transition: all 0.3s;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.5);
 }
 
 .slider::-moz-range-thumb {
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
     cursor: pointer;
     border: 2px solid #1f2937;
+    transition: all 0.3s;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.slider::-moz-range-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.5);
 }
 
 /* 聊天消息样式 */
 .chat-message {
-    margin-bottom: 0.75rem;
+    margin-bottom: 1rem;
+    animation: fadeIn 0.4s ease-out;
 }
 
 .chat-message.user {
     margin-left: auto;
-    max-width: 16rem;
+    max-width: 80%;
 }
 
 .chat-message.ai {
     margin-right: auto;
-    max-width: 16rem;
+    max-width: 80%;
 }
 
 .chat-message.user .message-content {
     background: linear-gradient(to right, #2563eb, #1d4ed8);
     color: white;
-    padding: 0.75rem;
-    border-radius: 0.5rem;
-    border-top-right-radius: 0;
+    padding: 1rem 1.25rem;
+    border-radius: 1rem;
+    border-top-right-radius: 0.25rem;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.chat-message.user .message-content::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.6s;
+}
+
+.chat-message.user .message-content:hover::before {
+    left: 100%;
 }
 
 .chat-message.ai .message-content {
     background-color: #374151;
-    padding: 0.75rem;
-    border-radius: 0.5rem;
-    border-top-left-radius: 0;
+    padding: 1rem 1.25rem;
+    border-radius: 1rem;
+    border-top-left-radius: 0.25rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(75, 85, 99, 0.3);
+}
+
+.chat-message.ai .message-content::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.2), transparent);
+    transition: left 0.6s;
+}
+
+.chat-message.ai .message-content:hover::before {
+    left: 100%;
 }
 
 /* 卡片悬停效果 */
 .gear-card, .operator-card {
-    transition: all 0.3s;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(75, 85, 99, 0.3);
+}
+
+.gear-card::before, .operator-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.1), transparent);
+    transition: left 0.8s;
+}
+
+.gear-card:hover::before, .operator-card:hover::before {
+    left: 100%;
 }
 
 .gear-card:hover, .operator-card:hover {
-    transform: translateY(-0.25rem);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 24px 40px -8px rgba(0, 0, 0, 0.3), 0 12px 24px -6px rgba(0, 0, 0, 0.2);
+    border-color: rgba(59, 130, 246, 0.5);
+}
+
+/* 干员卡片内容动画 */
+.operator-card * {
+    transition: all 0.3s;
+}
+
+.operator-card:hover h3 {
+    color: #3b82f6;
+    transform: translateY(-2px);
+}
+
+.operator-card:hover .operator-type {
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    transform: scale(1.05);
 }
 
 /* 进度条样式 */
@@ -213,6 +447,601 @@ body {
 
 .fade-in {
     animation: fadeIn 0.5s ease-out;
+}
+
+/* 滚动动画 */
+.scroll-reveal {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.scroll-reveal:not(.active) {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.6s ease-out;
+}
+
+.scroll-reveal.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* 脉冲动画 */
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+.pulse {
+    animation: pulse 2s infinite;
+}
+
+/* 呼吸动画 */
+@keyframes breathe {
+    0%, 100% {
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 40px rgba(59, 130, 246, 0.8);
+    }
+}
+
+.breathe {
+    animation: breathe 3s infinite;
+}
+
+/* 加载动画增强 */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-spinner {
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    border-top: 3px solid #3b82f6;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+/* 页面过渡效果 */
+section {
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+/* 平滑滚动 */
+html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 80px;
+}
+
+/* 视差滚动效果 */
+.parallax-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    opacity: 0.1;
+    transform: translateZ(-100px) scale(2);
+    transition: transform 0.1s ease-out;
+}
+
+/* 章节切换动画 */
+section {    
+    animation: sectionFadeIn 0.8s ease-out forwards;
+}
+
+@keyframes sectionFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 滚动时的视差效果 */
+body {
+    perspective: 1px;
+    overflow-x: hidden;
+    position: relative;
+}
+
+/* 三角洲行动背景元素 */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.15) 0%, transparent 25%),
+        radial-gradient(circle at 90% 30%, rgba(124, 58, 237, 0.15) 0%, transparent 30%),
+        radial-gradient(circle at 50% 70%, rgba(239, 68, 68, 0.12) 0%, transparent 25%),
+        radial-gradient(circle at 30% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 20%);
+    z-index: -2;
+    animation: backgroundPulse 8s ease-in-out infinite;
+    transform-origin: center;
+}
+
+/* 背景武器元素 */
+.background-elements {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    pointer-events: none;
+}
+
+/* 武器剪影 */
+.weapon-silhouette {
+    position: absolute;
+    opacity: 0.05;
+    filter: blur(1px);
+    animation: float 20s ease-in-out infinite;
+}
+
+.weapon-1 {
+    top: 10%;
+    left: 5%;
+    width: 150px;
+    height: 50px;
+    background: linear-gradient(45deg, #3b82f6, #8b5cf6);
+    clip-path: polygon(0 50%, 20% 30%, 40% 40%, 60% 20%, 80% 30%, 100% 50%, 80% 70%, 60% 60%, 40% 80%, 20% 70%);
+    animation-delay: 0s;
+}
+
+.weapon-2 {
+    top: 60%;
+    right: 5%;
+    width: 120px;
+    height: 40px;
+    background: linear-gradient(45deg, #ef4444, #f97316);
+    clip-path: polygon(0 50%, 30% 30%, 60% 40%, 100% 50%, 60% 60%, 30% 70%);
+    animation-delay: -5s;
+}
+
+.weapon-3 {
+    top: 30%;
+    right: 10%;
+    width: 100px;
+    height: 30px;
+    background: linear-gradient(45deg, #10b981, #3b82f6);
+    clip-path: polygon(0 50%, 25% 35%, 50% 45%, 75% 35%, 100% 50%, 75% 65%, 50% 55%, 25% 65%);
+    animation-delay: -10s;
+}
+
+/* 装备元素 */
+.equipment-element {
+    position: absolute;
+    opacity: 0.08;
+    filter: blur(1px);
+    animation: float 15s ease-in-out infinite;
+}
+
+.armor-1 {
+    top: 20%;
+    right: 15%;
+    width: 80px;
+    height: 100px;
+    background: linear-gradient(45deg, #f59e0b, #ef4444);
+    border-radius: 10px;
+    animation-delay: -2s;
+}
+
+.helmet-1 {
+    top: 70%;
+    left: 10%;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(45deg, #8b5cf6, #ec4899);
+    border-radius: 50%;
+    animation-delay: -8s;
+}
+
+/* 地图元素 */
+.map-element {
+    position: absolute;
+    opacity: 0.05;
+    filter: blur(1px);
+    animation: float 25s ease-in-out infinite;
+}
+
+.map-marker-1 {
+    top: 40%;
+    left: 20%;
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(45deg, #3b82f6, #10b981);
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    animation-delay: -3s;
+}
+
+.map-marker-2 {
+    top: 80%;
+    right: 20%;
+    width: 30px;
+    height: 30px;
+    background: linear-gradient(45deg, #ef4444, #f97316);
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    animation-delay: -12s;
+}
+
+/* 浮动动画 */
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0) rotate(0deg);
+    }
+    25% {
+        transform: translateY(-20px) rotate(5deg);
+    }
+    50% {
+        transform: translateY(0) rotate(0deg);
+    }
+    75% {
+        transform: translateY(20px) rotate(-5deg);
+    }
+}
+
+/* 背景脉冲动画 */
+@keyframes backgroundPulse {
+    0%, 100% {
+        opacity: 0.4;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.05);
+    }
+}
+
+/* 反馈消息样式 */
+#feedbackMessage {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* 章节特定背景 */
+
+/* 配装推荐章节背景 */
+#loadout {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.9) 100%);
+    position: relative;
+}
+
+#loadout::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.15) 0%, transparent 30%),
+        radial-gradient(circle at 80% 70%, rgba(124, 58, 237, 0.15) 0%, transparent 30%);
+    z-index: -1;
+}
+
+/* 干员查询章节背景 */
+#operators {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
+    position: relative;
+}
+
+#operators::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        radial-gradient(circle at 30% 20%, rgba(239, 68, 68, 0.15) 0%, transparent 30%),
+        radial-gradient(circle at 70% 80%, rgba(245, 158, 11, 0.15) 0%, transparent 30%);
+    z-index: -1;
+}
+
+/* 问答助手章节背景 */
+#faq {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.9) 100%);
+    position: relative;
+    margin-bottom: 4rem;
+}
+
+#faq::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.25) 0%, transparent 45%),
+        radial-gradient(circle at 10% 90%, rgba(59, 130, 246, 0.15) 0%, transparent 30%),
+        radial-gradient(circle at 90% 10%, rgba(124, 58, 237, 0.15) 0%, transparent 30%);
+    z-index: -1;
+}
+
+/* 关于章节背景 */
+#about {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
+    position: relative;
+    margin-bottom: 4rem;
+}
+
+#about::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        radial-gradient(circle at 25% 25%, rgba(124, 58, 237, 0.2) 0%, transparent 35%),
+        radial-gradient(circle at 75% 75%, rgba(239, 68, 68, 0.2) 0%, transparent 35%);
+    z-index: -1;
+}
+
+/* 全局卡片样式增强 */
+section > div.bg-gray-800 {
+    border-radius: 1.25rem;
+    border: 1px solid rgba(75, 85, 99, 0.3);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: linear-gradient(135deg, rgba(31, 41, 55, 0.8) 0%, rgba(17, 24, 39, 0.8) 100%);
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
+}
+
+section > div.bg-gray-800::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(59, 130, 246, 0.1), transparent, rgba(124, 58, 237, 0.1), transparent);
+    transform: rotate(45deg);
+    animation: shine 8s linear infinite;
+    z-index: 0;
+}
+
+section > div.bg-gray-800 > * {
+    position: relative;
+    z-index: 1;
+}
+
+section > div.bg-gray-800:hover {
+    box-shadow: 0 8px 32px rgba(59, 130, 246, 0.2), 0 4px 16px rgba(124, 58, 237, 0.15);
+    transform: translateY(-4px) scale(1.02);
+    border-color: rgba(59, 130, 246, 0.5);
+}
+
+/* 发光效果 */
+@keyframes shine {
+    0% {
+        transform: translateX(-100%) translateY(-100%) rotate(45deg);
+    }
+    100% {
+        transform: translateX(100%) translateY(100%) rotate(45deg);
+    }
+}
+
+/* 标题发光效果 */
+h2 {
+    position: relative;
+    display: inline-block;
+    text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+}
+
+/* 章节标题装饰 */
+section > div.flex.items-center.mb-6::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6, transparent);
+    border-radius: 1px;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+}
+
+/* 按钮光效增强 */
+#generateBtn {
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+}
+
+#generateBtn:hover {
+    transform: scale(1.08) translateY(-2px);
+    box-shadow: 0 12px 40px rgba(59, 130, 246, 0.6), 0 6px 20px rgba(124, 58, 237, 0.4);
+}
+
+/* 导航栏光效 */
+nav {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    backdrop-filter: blur(15px);
+    background-color: rgba(31, 41, 55, 0.95);
+    box-shadow: 0 4px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* 卡片悬停光效 */
+.gear-card, .operator-card {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(75, 85, 99, 0.3);
+}
+
+.gear-card:hover, .operator-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 24px 40px -8px rgba(0, 0, 0, 0.3), 0 12px 24px -6px rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.5);
+}
+
+/* 容器内边距优化 */
+main {
+    max-width: 1400px;
+}
+
+/* 响应式调整增强 */
+@media (max-width: 768px) {
+    .container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    main {
+        padding: 1rem;
+    }
+    
+    /* 导航栏响应式 */
+    nav {
+        padding: 0.75rem 1rem;
+    }
+    
+    nav .flex.flex-col.md\:flex-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    nav .flex.space-x-4 {
+        margin-top: 1rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .nav-link {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    /* 配装推荐模块响应式 */
+    #loadout .grid.grid-cols-1.lg\:grid-cols-4 {
+        grid-template-columns: 1fr;
+    }
+    
+    /* 干员查询模块响应式 */
+    #operatorList {
+        grid-template-columns: repeat(1, 1fr);
+    }
+    
+    /* 智能助手模块响应式 */
+    #chatContainer {
+        height: 40vh;
+    }
+    
+    .chat-message.user,
+    .chat-message.ai {
+        max-width: 90%;
+    }
+    
+    /* 快速问题按钮响应式 */
+    .grid.grid-cols-2.md\:grid-cols-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    /* 关于模块响应式 */
+    #about .grid.grid-cols-1.md\:grid-cols-2 {
+        grid-template-columns: 1fr;
+    }
+    
+    /* 按钮和控件响应式 */
+    .player-type-btn {
+        padding: 1rem;
+    }
+    
+    .map-mode-btn {
+        padding: 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    #generateBtn {
+        padding: 1rem;
+        font-size: 1rem;
+    }
+    
+    /* 标题响应式 */
+    h1 {
+        font-size: 1.5rem;
+    }
+    
+    h2 {
+        font-size: 1.5rem;
+    }
+    
+    h3 {
+        font-size: 1.25rem;
+    }
+    
+    /* 背景元素响应式 */
+    .background-elements {
+        display: none; /* 在移动设备上隐藏背景元素，提升性能 */
+    }
+    
+    /* 滚动效果响应式 */
+    body {
+        scroll-snap-type: none; /* 在移动设备上禁用滚动快照，提升滚动流畅度 */
+    }
+    
+    section {
+        scroll-snap-align: none;
+        min-height: auto; /* 取消最小高度限制，适应内容 */
+    }
+    
+    /* 卡片响应式 */
+    section > div.bg-gray-800 {
+        backdrop-filter: none; /* 在移动设备上禁用 backdrop-filter，提升性能 */
+    }
+}
+
+/* 平板设备响应式 */
+@media (min-width: 769px) and (max-width: 1024px) {
+    #operatorList {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    #loadout .grid.grid-cols-1.lg\:grid-cols-4 {
+        grid-template-columns: 1fr 2fr;
+    }
+    
+    /* 背景元素响应式 */
+    .weapon-silhouette,
+    .equipment-element,
+    .map-element {
+        transform: scale(0.8); /* 在平板设备上缩小背景元素 */
+    }
 }
 
 /* 强度标签颜色 */
@@ -307,6 +1136,39 @@ body {
 @keyframes bounce {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-5px); }
+}
+
+/* 生成按钮增强 */
+#generateBtn {
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#generateBtn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.6s;
+    z-index: -1;
+}
+
+#generateBtn:hover::before {
+    left: 100%;
+}
+
+#generateBtn:hover {
+    transform: scale(1.08) translateY(-2px);
+    box-shadow: 0 12px 40px rgba(59, 130, 246, 0.6);
+}
+
+#generateBtn:active {
+    transform: scale(0.98);
 }
 
 /* 新增：地图模式按钮颜色 */
