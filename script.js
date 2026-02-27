@@ -86,9 +86,9 @@ let currentPlayerType = "鼠鼠";
 let currentMap = "zero_dam";
 let currentMode = "常规";
 let conversationHistory = [];
-let aiEnabled = false;
-let openaiApiKey = '';
-
+let aiEnabled = true;
+let deepseekApiKey = '870faf91344c41eaadf0a5e53ff7ea1b.9w9AjuhFJoquNNIw';
+let hasGeneratedLoadout = false;
 // 全局弹窗变量
 let currentModal = null;
 
@@ -2440,6 +2440,7 @@ if (playerType === "猛攻流") {
     });
     
     displayLoadout(optimized.weapon, adjusted.gear, selectedOperators, adjusted.budgetAllocation, totalCost);
+    hasGeneratedLoadout = true;
         
 } catch (error) {
     clearTimeout(timeout);
@@ -4018,9 +4019,15 @@ function shareLoadout() {
 // 问答助手
 async function handleQuestion() {
     const input = document.getElementById('questionInput');
+    const askBtn = document.getElementById('askBtn');
     const question = input.value.trim();
     
     if (!question) return;
+    
+    // 禁用输入和按钮，防止重复发送
+    input.disabled = true;
+    askBtn.disabled = true;
+    input.value = 'AI思考中...';
     
     // 添加用户消息到对话历史
     conversationHistory.push({ role: 'user', content: question });
@@ -4064,8 +4071,11 @@ async function handleQuestion() {
         addMessageToChat(errorAnswer, 'ai');
     }
     
-    // 清空输入框
+    // 恢复输入和按钮
+    input.disabled = false;
+    askBtn.disabled = false;
     input.value = '';
+    input.focus();
 }
 
 // 添加AI思考消息
@@ -4082,7 +4092,7 @@ function addThinkingMessage() {
                 <i class="fas fa-robot text-sm"></i>
             </div>
             <div class="max-w-xs">
-                <p class="text-sm text-gray-400 mb-1">三角洲配装助手</p>
+                <p class="text-sm text-gray-400 mb-1">派宝</p>
                 <div class="bg-gray-700 p-3 rounded-lg rounded-tl-none">
                     <div class="flex space-x-1">
                         <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0s"></div>
@@ -4137,7 +4147,7 @@ function addMessageToChat(message, sender) {
                     <i class="fas fa-robot text-sm"></i>
                 </div>
                 <div class="max-w-xs">
-                    <p class="text-sm text-gray-400 mb-1">三角洲配装助手</p>
+                    <p class="text-sm text-gray-400 mb-1">派宝</p>
                     <div class="bg-gray-700 p-3 rounded-lg rounded-tl-none">
                         ${safeMessage}
                     </div>
@@ -4153,89 +4163,15 @@ function addMessageToChat(message, sender) {
 
 
 const QA_SYNONYMS = {
-    '鼠鼠': ['老鼠', '避战', '捡漏', '垃圾佬'],
-    '堵桥': ['堵点', '蹲守', '掠夺', '老六'],
-    '猛攻': ['猛攻流', '正面', '刚枪', '激进'],
-    'm14': ['M14', '精确射手', '连狙'],
-    '零号大坝': ['大坝', '零号', '行政楼'],
-    '预算': ['资金', '钱', '花费', '成本'],
-    '干员': ['角色', '人物', '英雄'],
-    '头盔': ['帽子', '头', '防护头'],
-    '护甲': ['防弹衣', '甲', '防护衣'],
-    '地图': ['场景', '地图信息'],
-    '武器': ['枪', '枪械', '武器推荐'],
-    '蜂医': ['医生', '奶妈', '支援'],
-    '红狼': ['突击', '战士'],
-    '威龙': ['龙', '机动'],
-    '露娜': ['侦察', '弓箭'],
-    '骇爪': ['黑客', '侦察兵'],
-    '蛊': ['毒', '支援兵'],
-    '蝶': ['无人机', '医疗'],
-    '牧羊人': ['陷阱', '工程'],
-    '乌鲁鲁': ['工程兵', '掩体'],
-    '深蓝': ['盾牌', '坦克'],
-    '航天基地': ['航天', '基地', '堵桥地图'],
-    '潮汐监狱': ['监狱', '室内', '近战'],
-    '长弓溪谷': ['长弓', '溪谷', '狙击'],
-    '巴克什': ['巷战', '城镇'],
-    '冲锋枪': ['SMG', '近程', '快速'],
-    '突击步枪': ['步枪', 'AR', '中距离'],
-    '精确射手步枪': ['连狙', 'DMR', '中远程'],
-    '狙击步枪': ['狙', '远程', '单发'],
-    '轻机枪': ['机枪', '压制', '重火力'],
-    '胸挂': ['胸甲', '弹夹', '装备'],
-    '背包': ['包', '容量', '储存'],
-    '药品': ['医疗', '血包', '回复'],
-    '弹药': ['子弹', '弹匣', '消耗品'],
-    '改枪码': ['改枪', '代码', '配置'],
-    '撤离点': ['撤离', '出口', '离开'],
-    '战备值': ['战备', '等级', '解锁'],
-    '模式': ['难度', '级别', '模式选择'],
-    '玩法': ['策略', '玩法推荐', '风格'],
-    '技巧': ['攻略', '方法', '窍门']
+    '鼠鼠': ['老鼠', '避战', '捡漏'],
+    '堵桥': ['堵点', '蹲守', '老六'],
+    '猛攻': ['猛攻流', '刚枪']
 };
 
 const QA_MAP = {
-    '鼠鼠': '鼠鼠玩法核心是低成本避战，推荐使用UZI、勇士等便宜武器，优先扩大背包容量捡垃圾。干员选择蜂医最佳，可以利用烟雾弹安全撤离。预算分配建议：武器15%，防具15%，背包30%，剩余40%用于药品和备用。',
-    '堵桥': '航天基地堵桥需要高射速武器，如MP7、Vector，选择红狼干员利用烟雾弹和加速转点。建议预算30-50万，武器占40%，防具占35%，注重高爆发和偷袭能力。',
-    '猛攻': '猛攻流需要满改M14、腾龙等S级武器，搭配5-6级防具，主动进攻资源密集区。预算建议70万以上，武器占50%，防具占40%，干员选择威龙或红狼。',
-    'm14': 'M14是游戏内爆发最高武器之一，满改价格85万左右，适合猛攻流玩家。优点：大口径高输出，全距离作战；缺点：后坐力大，需要熟练控枪。',
-    '零号大坝': '零号大坝适合新手，行政楼资源丰富但危险，鼠鼠可以在外围搜刮，猛攻流直接进攻行政楼。地图有8个撤离点，包括常规、条件、概率、付费和电梯撤离。',
-    '预算': '预算分配建议：鼠鼠武器15%、防具15%、背包30%、药品5%、子弹5%、备用30%；猛攻流武器50%、防具40%、其他10%；堵点夺舍武器40%、防具35%、其他25%。',
-    '干员': '红狼适合突击，蜂医适合鼠鼠，露娜适合侦察，威龙适合机动突击。根据玩法选择：鼠鼠选蜂医，堵点选红狼，猛攻选威龙。',
-    '头盔': 'GN重型夜视头价格60万，适合猛攻流；DICH训练头盔13.5万，适合鼠鼠；4级听力头20万，适合堵点玩家。头盔选择根据预算和玩法决定。',
-    '护甲': 'HA-2重型防弹衣350万，顶级防护；TGH防弹衣6.3万，适合新手；MK-2战术背心19.5万，均衡选择。鼠鼠用低级甲，猛攻用高级甲。',
-    '地图': '零号大坝适合新手，航天基地适合堵桥，潮汐监狱适合猛攻，长弓溪谷适合狙击，巴克什适合巷战。不同地图需要不同配装策略。',
-    '武器': '鼠鼠推荐UZI、勇士；堵点推荐MP7、Vector；猛攻推荐M14、腾龙、MK47。根据预算和玩法选择合适武器。',
-    '蜂医': '蜂医是支援型干员，适合鼠鼠玩家。技能包括激素枪（远程治疗）、烟幕无人机（提供掩护）和快速救援。核心优势是自我续航和无敌烟雾撤离。',
-    '红狼': '红狼是突击型干员，适合堵点夺舍和猛攻流。技能包括动力外骨骼（提升移速和射速）、三联装手炮和战术烟雾弹。核心优势是击杀后刷新加速与回血。',
-    '威龙': '威龙是突击型干员，适合猛攻流。技能包括虎蹲炮（控制敌人）、动力推进（快速位移）和磁吸炸弹。核心优势是全方位立体突击能力。',
-    '露娜': '露娜是侦察型干员，适合所有玩法。技能包括探测箭矢（侦查敌人）、电击箭矢和破片手雷。核心优势是全游戏最强的单人预警能力。',
-    '骇爪': '骇爪是侦察型干员，适合堵点夺舍。技能包括信号破译器（全图透视）、闪光巡飞器和数据飞刀。核心优势是全图雷达与增强隐蔽性。',
-    '蛊': '蛊是支援型干员，适合猛攻流。技能包括致盲毒雾、肾上腺素激活（提升团队枪械控制）和流荧集群系统（削弱敌人）。核心优势是团队进攻的力量倍增器。',
-    '蝶': '蝶是支援型干员，适合团队作战。技能包括蝶式救援无人机、纳米粉尘医疗和遥控烟雾。核心优势是安全高效的远程支援与救援。',
-    '牧羊人': '牧羊人是工程型干员，适合堵点防御。技能包括声波陷阱、声波震慑和增强型破片手雷。核心优势是请君入瓮的陷阱大师。',
-    '乌鲁鲁': '乌鲁鲁是工程型干员，适合猛攻流。技能包括巡飞弹（远程打击）、速凝掩体和复合型燃烧弹。核心优势是多功能战术攻坚与支援。',
-    '深蓝': '深蓝是工程型干员，适合团队推进。技能包括重型防爆套装（全身盾）、多功能钩爪枪和刀片刺网手雷。核心优势是团队推进的绝对核心。',
-    '航天基地': '航天基地地形开阔，建筑分散，视野良好。适合堵桥流和狙击玩法。资源点分散于各大厂房和设施内，撤离点约5-6个。',
-    '潮汐监狱': '潮汐监狱以室内复杂结构为主，多层空间，通道狭窄，近距离交战频繁。适合猛攻流玩家，推荐使用高射速冲锋枪和霰弹枪。',
-    '长弓溪谷': '长弓溪谷是山地、森林地形，植被覆盖多，高低差显著。适合远程交战与隐蔽移动，是狙击手和老六的乐园。',
-    '巴克什': '巴克什是城镇巷战与部分开阔地结合的地图。建筑密集，巷子错综复杂，同时也有广场等交火区。适合中近距离作战。',
-    '冲锋枪': '冲锋枪适合近距离作战，推荐MP7、Vector、SR-3M等。优点是射速快、机动性强；缺点是射程短、伤害低。适合潮汐监狱等室内地图。',
-    '突击步枪': '突击步枪适合中近距离作战，推荐K416、AUG、AKM等。优点是综合性能均衡；缺点是没有明显优势。适合大多数地图。',
-    '精确射手步枪': '精确射手步枪适合中远距离作战，推荐M14、SVD等。优点是伤害高、射程远；缺点是后坐力大、射速慢。适合长弓溪谷等开阔地图。',
-    '狙击步枪': '狙击步枪适合远距离作战，推荐马林杠杆等。优点是伤害极高、射程远；缺点是射速慢、容错率低。适合长弓溪谷等开阔地图。',
-    '轻机枪': '轻机枪适合压制和持续射击，推荐PKM、M250等。优点是弹容量大、持续火力强；缺点是机动性差、换弹慢。适合压制敌人和防守。',
-    '胸挂': '胸挂推荐强袭战术背心（14格）、GIR野战胸挂（16格）、通用战术胸挂（9格）。鼠鼠玩家推荐大容量胸挂，猛攻流玩家可以选择基础胸挂。',
-    '背包': '背包推荐GA野战背包（20格，无移速惩罚）、D3战术登山包（28格，移速仅-1%）。鼠鼠玩家优先选择大容量背包，猛攻流玩家可以选择基础背包。',
-    '药品': '药品推荐：鼠鼠玩家携带基础药品（3-5万），堵点夺舍玩家携带中级药品（5-8万），猛攻流玩家携带高级药品（8-15万）。',
-    '弹药': '弹药推荐：鼠鼠玩家携带基础弹药（2-3万），堵点夺舍玩家携带中级弹药（5-10万），猛攻流玩家携带高级弹药（10-20万）。',
-    '改枪码': '改枪码是游戏中用于快速复制武器配置的代码。在武器详情页面可以找到改枪码，点击复制按钮即可复制到剪贴板，然后在游戏中粘贴使用。',
-    '撤离点': '撤离点分为常规、条件、概率、付费和电梯撤离。常规撤离点固定开放，条件撤离点需满足特定条件，概率撤离点随机开放，付费撤离点需要支付哈夫币，电梯撤离点需要拉闸开启。',
-    '战备值': '战备值是游戏中的一种资源，用于解锁机密和绝密模式。不同地图和模式有不同的战备值要求，玩家需要达到要求才能进入相应模式。',
-    '模式': '游戏模式分为常规、机密和绝密。常规模式无成本限制，适合新手；机密模式有最低成本要求，适合有一定装备基础的玩家；绝密模式有高成本要求，适合装备成型的玩家。',
-    '玩法': '游戏玩法主要分为鼠鼠（避战捡漏）、堵点夺舍（蹲守掠夺）和猛攻流（正面作战）。不同玩法需要不同的配装策略和干员选择。',
-    '技巧': '游戏技巧：1. 鼠鼠玩家要学会快速搜刮和安全撤离；2. 堵点玩家要选择合适的埋伏位置和时机；3. 猛攻玩家要掌握高级武器的控枪技巧；4. 所有玩家都要学会合理分配预算和选择合适的干员。'
+    '鼠鼠': '🐭 鼠鼠玩法：低成本避战+大背包捡垃圾\n\n🔫 武器：UZI/勇士(10-30万)\n🛡️ 防具：TGH防弹衣+DICH头盔\n🎒 背包：GA野战/D3登山包\n👤 干员：蜂医',
+    '堵桥': '🎯 堵点夺舍：埋伏偷袭+一击必杀\n\n🔫 武器：MP7/Vector(30-60万)\n🛡️ 防具：4级听力头+MK-2背心\n👤 干员：红狼/露娜\n📍 地图：航天基地最佳',
+    '猛攻': '⚔️ 猛攻流：顶级装备+正面硬刚\n\n🔫 武器：M14/腾龙满改(70万+)\n🛡️ 防具：5-6级全套防护\n👤 干员：威龙/蛊'
 };
 
 const REVERSE_SYNONYM_MAP = {};
@@ -4309,6 +4245,27 @@ function getContextBasedRecommendation(context) {
 function getAnswer(question, conversationHistory = []) {
     const q = question.toLowerCase();
     
+    // 礼貌用语固定回答
+    const politeResponses = {
+        '谢谢': '😊 不客气！有其他问题随时问我~',
+        '感谢': '😊 很高兴能帮到你！',
+        '你好': '👋 你好！我是派宝，有什么配装问题可以问我~',
+        '嗨': '👋 嗨！有什么可以帮你的吗？',
+        '再见': '👋 再见！祝你游戏愉快~',
+        '拜拜': '👋 拜拜！下次有问题再来找我~',
+        '好的': '👍 好的！还有其他问题吗？',
+        '知道了': '👍 明白了！有其他问题可以继续问我~',
+        '厉害': '😊 谢谢夸奖！我会继续努力的~',
+        '不错': '😊 谢谢认可！有问题随时问我~'
+    };
+    
+    // 检查礼貌用语
+    for (const [key, response] of Object.entries(politeResponses)) {
+        if (q.includes(key)) {
+            return response;
+        }
+    }
+    
     const contexts = getRecentUserContext(conversationHistory);
     const keyword = findMatchingKeyword(q);
     
@@ -4335,13 +4292,19 @@ function getAnswer(question, conversationHistory = []) {
         }
     }
     
-    if (isFollowUpQuestion(q)) {
-        return getPlayerTypeRecommendation(currentPlayerType);
+    // 检查是否已生成配装方案（改为提示但不阻止）
+    if (!hasGeneratedLoadout) {
+        console.log('提示：建议先生成配装方案');
     }
     
-    if (aiEnabled && openaiApiKey) {
+    console.log('准备调用AI, aiEnabled:', aiEnabled, 'deepseekApiKey:', deepseekApiKey ? '已设置' : '未设置');
+    
+    if (aiEnabled && deepseekApiKey) {
+        console.log('正在调用AI...');
         return generateAnswerWithAI(question, conversationHistory);
     }
+    
+    console.log('AI未启用，返回默认回答');
     
     const mapName = getMapName(currentMap);
     const budgetStr = formatPrice(currentBudget);
@@ -4489,49 +4452,61 @@ function copyCode(code) {
 // 生成AI回答
 async function generateAnswerWithAI(question, conversationHistory) {
     try {
-        // 构建系统提示
-        const systemPrompt = `你是三角洲配装助手，专注于游戏《三角洲行动》的配装和战术建议。
+        // 构建武器知识（精简版）
+        const weaponKnowledge = localWeaponsData.slice(0, 20).map(w => {
+            const price = w.price ? formatPrice(w.price) : '未知价格';
+            const strength = w.strength || '';
+            const type = w.type || '';
+            return `${w.name}(${type},${price},${strength})`;
+        }).join('；');
+        
+        // 构建干员知识
+        const operatorKnowledge = localOperatorsData.map(o => {
+            return `${o.name}(${o.type}):${o.skills.main.substring(0, 30)}...`;
+        }).join('；');
 
-游戏玩法分为三种：
-1. 鼠鼠（避战/捡漏）：低成本避战，优先扩大背包容量捡垃圾
-2. 堵点夺舍（蹲守/掠夺）：选择敌人必经之路埋伏，一击必杀
-3. 猛攻流（正面作战）：使用顶级装备，主动进攻资源密集区
+        const systemPrompt = `你是《三角洲行动》配装助手"派宝"。
 
-当前用户设置：
-- 玩法：${currentPlayerType}
-- 预算：${formatPrice(currentBudget)}
-- 地图：${getMapName(currentMap)}
-- 模式：${currentMode}
+【回答规则】
+- 直接回答用户问题，简短精炼，80字以内
+- 适当使用emoji
 
-请根据用户的问题提供专业、准确的游戏建议，包括武器选择、防具推荐、干员选择、预算分配等方面。`;
+【玩法】鼠鼠=避战捡漏；堵点夺舍=蹲守埋伏；猛攻流=正面硬刚
 
-        // 构建消息历史
+【武器库】${weaponKnowledge}
+
+【干员】${operatorKnowledge}
+
+用户设置：${currentPlayerType}玩法，预算${formatPrice(currentBudget)}，${getMapName(currentMap)}地图`;
+
         const messages = [
             { role: 'system', content: systemPrompt }
         ];
 
-        // 添加最近的对话历史
         if (conversationHistory.length > 0) {
-            messages.push(...conversationHistory.slice(-5)); // 只使用最近5条对话
+            messages.push(...conversationHistory.slice(-3));
         }
 
-        // 添加当前问题
         messages.push({ role: 'user', content: question });
 
-        // 调用OpenAI API
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${openaiApiKey}`
+                'Authorization': `Bearer ${deepseekApiKey}`
             },
             body: JSON.stringify({
-                model: 'gpt-3.5-turbo',
+                model: 'glm-4-flash',
                 messages: messages,
-                max_tokens: 500,
-                temperature: 0.7
+                max_tokens: 200,
+                temperature: 0.7,
+                stream: false
             })
         });
+
+        if (!response.ok) {
+            throw new Error(`API请求失败: ${response.status}`);
+        }
 
         const data = await response.json();
         if (data.choices && data.choices.length > 0) {
@@ -4541,14 +4516,13 @@ async function generateAnswerWithAI(question, conversationHistory) {
         }
     } catch (error) {
         console.error('AI generation error:', error);
-        // 失败时返回默认回答
-        return `根据你当前的设置（${currentPlayerType}玩法，预算${formatPrice(currentBudget)}，地图${getMapName(currentMap)}，模式${currentMode}），建议：${
-            currentPlayerType === '鼠鼠' ? '选择便宜武器(10-30万)，优先背包容量，使用蜂医干员安全撤离。' :
-            currentPlayerType === '堵点夺舍' ? '选择高爆发武器(30-60万)，注重偷袭，使用红狼或露娜干员。' :
-            '选择顶级装备(70万+)，正面作战，使用威龙或蛊干员。'
+        return `⚠️ AI暂时不可用\n\n💡 ${currentPlayerType}玩法建议：${
+            currentPlayerType === '鼠鼠' ? '便宜武器+大背包+蜂医' :
+            currentPlayerType === '堵点夺舍' ? '高爆发武器+红狼/露娜' :
+            '顶级装备+威龙/蛊'
         }`;
     }
 }
 
 // 初始化完成
-console.log("三角洲配装助手代码加载完成！");
+console.log("三角洲配装助手代码加载完成！")
