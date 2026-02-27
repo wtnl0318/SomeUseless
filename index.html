@@ -234,34 +234,41 @@
             <div class="flex items-center mb-6">
                 <div class="w-1 h-8 bg-green-500 mr-3"></div>
                 <h2 class="text-2xl font-bold">🤖 智能助手</h2>
+                <span class="ml-3 px-3 py-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full text-xs font-semibold animate-pulse">
+                    ✨ 已接入AI
+                </span>
             </div>
             
             <div class="bg-gray-800 rounded-xl p-6 shadow-lg">
                 <div class="flex items-center mb-6">
-                    <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center mr-3">
-                        <i class="fas fa-robot text-xl"></i>
+                    <div class="w-14 h-14 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center mr-4 breathe">
+                        <i class="fas fa-robot text-2xl"></i>
                     </div>
                     <div>
                         <h3 class="text-xl font-bold">派宝</h3>
-                        <p class="text-gray-400">随时为您解答配装疑问</p>
+                        <p class="text-gray-400 text-sm">专业配装顾问</p>
+                    </div>
+                    <div class="ml-auto flex items-center text-xs text-green-400">
+                        <span class="w-2 h-2 bg-green-400 rounded-full mr-1 animate-pulse"></span>
+                        在线
                     </div>
                 </div>
                 
-                <div id="chatContainer" class="h-64 overflow-y-auto mb-4 p-4 bg-gray-900 rounded-lg">
+                <div id="chatContainer" class="h-80 overflow-y-auto mb-4 p-4 bg-gray-900 rounded-lg border border-gray-700">
                     <div class="chat-message ai">
                         <div class="flex">
-                            <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center mr-3">
+                            <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
                                 <i class="fas fa-robot text-sm"></i>
                             </div>
                             <div>
-                                <p class="text-sm text-gray-400 mb-1">派宝</p>
+                                <p class="text-sm text-gray-400 mb-1">派宝 <span class="text-xs text-purple-400">AI</span></p>
                                 <div class="bg-gray-700 p-3 rounded-lg">
-                                    您好！我是派宝，可以为您解答以下问题：<br>
-                                    1. 如何为"鼠鼠"玩法配装？<br>
-                                    2. 不同地图的战术建议<br>
-                                    3. 干员选择与技能搭配<br>
-                                    4. 预算分配建议<br>
-                                    5. 武器改装与性价比
+                                    你好！我是派宝，已接入智谱AI，可以智能回答配装问题：
+                                    <br><br>
+                                    🎯 <strong>玩法配装</strong> - 鼠鼠/堵点/猛攻流<br>
+                                    🔫 <strong>武器推荐</strong> - 各价位性价比武器<br>
+                                    👤 <strong>干员选择</strong> - 根据玩法推荐干员<br>
+                                    🗺️ <strong>地图战术</strong> - 各地图攻略建议
                                 </div>
                             </div>
                         </div>
@@ -270,24 +277,24 @@
                 
                 <div class="flex">
                     <input type="text" id="questionInput" placeholder="输入您的问题，例如：鼠鼠怎么配装？" 
-                           class="flex-grow bg-gray-700 rounded-l-lg p-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <button id="askBtn" class="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 px-6 rounded-r-lg transition-all">
-                        <i class="fas fa-paper-plane"></i>
+                           class="flex-grow bg-gray-700 rounded-l-lg p-4 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-gray-600">
+                    <button id="askBtn" class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-8 rounded-r-lg transition-all font-semibold">
+                        <i class="fas fa-paper-plane mr-2"></i>发送
                     </button>
                 </div>
                 
                 <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2">
-                    <button class="quick-question-btn" data-question="鼠鼠怎么配装？">
-                        <i class="fas fa-mouse mr-2"></i>鼠鼠配装
+                    <button class="quick-question-btn bg-gray-700 hover:bg-gray-600 p-3 rounded-lg text-sm transition-all border border-gray-600" data-question="鼠鼠怎么配装？">
+                        <i class="fas fa-mouse mr-2 text-yellow-400"></i>鼠鼠配装
                     </button>
-                    <button class="quick-question-btn" data-question="猛攻流需要什么武器？">
-                        <i class="fas fa-fist-raised mr-2"></i>猛攻武器
+                    <button class="quick-question-btn bg-gray-700 hover:bg-gray-600 p-3 rounded-lg text-sm transition-all border border-gray-600" data-question="猛攻流需要什么武器？">
+                        <i class="fas fa-fist-raised mr-2 text-red-400"></i>猛攻武器
                     </button>
-                    <button class="quick-question-btn" data-question="堵桥用什么干员？">
-                        <i class="fas fa-bridge mr-2"></i>堵桥干员
+                    <button class="quick-question-btn bg-gray-700 hover:bg-gray-600 p-3 rounded-lg text-sm transition-all border border-gray-600" data-question="堵桥用什么干员？">
+                        <i class="fas fa-bridge mr-2 text-blue-400"></i>堵桥干员
                     </button>
-                    <button class="quick-question-btn" data-question="零号大坝怎么玩？">
-                        <i class="fas fa-map mr-2"></i>零号大坝
+                    <button class="quick-question-btn bg-gray-700 hover:bg-gray-600 p-3 rounded-lg text-sm transition-all border border-gray-600" data-question="零号大坝怎么玩？">
+                        <i class="fas fa-map mr-2 text-green-400"></i>零号大坝
                     </button>
                 </div>
             </div>
@@ -356,6 +363,17 @@
                                 <i class="fas fa-code mr-2"></i>
                                 数据来源：游戏数据波动大，价格信息仅供参考
                             </p>
+                        </div>
+                        
+                        <div class="mt-4 p-4 bg-gradient-to-r from-purple-900/30 to-blue-900/30 rounded-lg border border-purple-700/30">
+                            <h4 class="font-bold text-purple-300 mb-2"><i class="fas fa-brain mr-2"></i>AI智能问答说明</h4>
+                            <p class="text-sm text-gray-300 mb-2">智能助手已接入智谱AI (GLM-4-Flash)，回答逻辑：</p>
+                            <ol class="text-sm text-gray-400 space-y-1 list-decimal list-inside">
+                                <li>优先匹配关键词库，直接返回预设答案</li>
+                                <li>无匹配关键词时，调用AI智能回答</li>
+                                <li>AI会结合当前配装设置给出建议</li>
+                            </ol>
+                            <p class="text-xs text-yellow-400 mt-2"><i class="fas fa-exclamation-triangle mr-1"></i>AI额度有限，请珍惜使用，优先使用快捷问题按钮</p>
                         </div>
                     </div>
                 </div>
